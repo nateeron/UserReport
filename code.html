@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Code Editor</title>
+  <style>
+    body {
+      margin: 0;
+      background: #1e1e1e;
+      color: white;
+      font-family: Arial;
+    }
+
+    .topbar {
+      padding: 10px;
+      background: #111;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    select, button {
+      padding: 6px 10px;
+      background: #222;
+      color: white;
+      border: 1px solid #333;
+      border-radius: 6px;
+    }
+
+    #editor {
+      width: 100%;
+      height: calc(100vh - 60px);
+    }
+  </style>
+
+  <!-- Monaco CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+</head>
+<body>
+
+<div class="topbar">
+  <select id="language">
+    <option value="javascript">JavaScript</option>
+    <option value="json">JSON</option>
+    <option value="html">HTML</option>
+    <option value="css">CSS</option>
+    <option value="csharp">C#</option>
+    <option value="python">Python</option>
+    <option value="sql">SQL</option>
+    <option value="bat">Batch</option>
+    <option value="plaintext">Text</option>
+  </select>
+
+  <button onclick="downloadCode()">Download</button>
+</div>
+
+<div id="editor"></div>
+
+<script>
+require.config({
+  paths: {
+    vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs"
+  }
+});
+
+require(["vs/editor/editor.main"], function () {
+
+  window.editor = monaco.editor.create(document.getElementById("editor"), {
+    value: "// Write your code here\n",
+    language: "javascript",
+    theme: "vs-dark",
+    automaticLayout: true,
+    fontSize: 14,
+    tabSize: 4,
+    insertSpaces: true,
+    formatOnType: true,
+    formatOnPaste: true,
+    minimap: { enabled: false },
+    lineNumbers: "on",
+  });
+
+  document.getElementById("language").addEventListener("change", function () {
+    monaco.editor.setModelLanguage(editor.getModel(), this.value);
+  });
+
+});
+
+function downloadCode() {
+  const code = editor.getValue();
+  const blob = new Blob([code], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "code.txt";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Task & Result</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #1a1a1e;
+      color: #e4e4e7;
+      min-height: 100vh;
+    }
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .page-header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 0;
+      color: #fafafa;
+    }
+    .btn-logout {
+      padding: 8px 16px;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      background: #252529;
+      color: #e4e4e7;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .btn-logout:hover {
+      background: #3f3f46;
+      border-color: #52525b;
+    }
+    .block {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      padding: 20px;
+      margin-bottom: 16px;
+      background: #252529;
+      border-radius: 12px;
+      border: 1px solid #3f3f46;
+      position: relative;
+    }
+    .block .btn-delete-task {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 6px 12px;
+      background: #3f3f46;
+      border: none;
+      border-radius: 6px;
+      color: #a1a1aa;
+      font-size: 0.75rem;
+      cursor: pointer;
+      z-index: 2;
+    }
+    .block .btn-delete-task:hover {
+      background: #dc2626;
+      color: #fff;
+    }
+    .block-sep {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #52525b, transparent);
+      margin: 20px 0;
+    }
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .col-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #a1a1aa;
+    }
+    .img-box {
+      aspect-ratio: 4/3;
+      background: #18181b;
+      border: 1px dashed #3f3f46;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #71717a;
+      font-size: 0.875rem;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+    }
+    .img-box:hover { border-color: #52525b; }
+    .img-box.uploading { opacity: 0.7; pointer-events: none; }
+    .img-box.uploading::after {
+      content: 'Uploading…';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.5);
+      font-size: 0.875rem;
+    }
+    .img-box input[type="file"] { display: none; }
+    .img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      cursor: zoom-in;
+    }
+    .img-box .upload-hint {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      font-size: 0.7rem;
+      color: #52525b;
+    }
+    .img-box .img-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 6px;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 2;
+    }
+    .img-box.has-image:hover .img-actions { opacity: 1; }
+    .img-box .img-actions button {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .img-box .img-actions button:hover {
+      background: rgba(0,0,0,0.85);
+    }
+    .img-box .img-actions .btn-delete-img:hover { background: #dc2626; }
+    /* Edit image dialog */
+    #edit-image-dialog {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 10002;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #edit-image-dialog.active { display: flex; }
+    #edit-image-dialog .edit-image-dialog-inner {
+      width: 100%;
+      max-width: 98vw;
+      height: 100%;
+      max-height: 98vh;
+      background: #1a1a1e;
+      border-radius: 12px;
+      border: 1px solid #3f3f46;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #edit-image-dialog .edit-image-dialog-bar {
+      flex: 0 0 auto;
+      padding: 10px 12px;
+      border-bottom: 1px solid #3f3f46;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    #edit-image-dialog .edit-image-dialog-bar .btn-close-edit {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #3f3f46;
+      color: #e4e4e7;
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    #edit-image-dialog .edit-image-dialog-bar .btn-close-edit:hover { background: #52525b; }
+    #edit-image-dialog .edit-image-iframe-wrap {
+      flex: 1;
+      min-height: 0;
+    }
+    #edit-image-dialog .edit-image-iframe-wrap iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    /* Image zoom overlay (คลิกรูปใน .img-box.has-image → ซูม Scroll ลากเลื่อน) */
+    .img-zoom-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(62, 62, 63, 0.88);
+      z-index: 9999;
+      cursor: default;
+    }
+    .img-zoom-overlay.active { display: block; }
+    .img-zoom-overlay .img-zoom-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      font-size: 1.25rem;
+      cursor: pointer;
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .img-zoom-overlay .img-zoom-close:hover { background: rgba(255,255,255,0.25); }
+    .img-zoom-overlay .img-zoom-wrap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transform-origin: center center;
+      transition: transform 0.1s ease;
+    }
+    .img-zoom-overlay .img-zoom-wrap .img-zoom-image {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      box-shadow: 5px 3px 50px rgba(0,0,0,0.97);
+      pointer-events: none;
+      user-select: none;
+    }
+    .img-zoom-overlay .img-zoom-percent {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(99, 102, 106, 0.82);
+      font-size: 1rem;
+      color: rgba(240, 248, 255, 0.87);
+      min-width: 75px;
+      text-align: center;
+      border-radius: 8px;
+      padding: 6px 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 10000;
+    }
+    .img-zoom-overlay .img-zoom-percent.show { opacity: 1; }
+    .comments {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .comment-feed {
+      max-height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 8px 0;
+    }
+    .comment-item {
+      background: #18181b;
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid #27272a;
+      position: relative;
+      padding-right: 36px;
+    }
+    .comment-item .comment-text {
+      font-size: 0.875rem;
+      color: #e4e4e7;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .comment-item .comment-time {
+      color: #71717a;
+      font-size: 0.7rem;
+      margin-top: 4px;
+    }
+    .comment-item .comment-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .comment-item:hover .comment-actions,
+    .comment-item.editing .comment-actions {
+      opacity: 1;
+    }
+    .comment-item .comment-actions button {
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: none;
+      border-radius: 6px;
+      background: #3f3f46;
+      color: #a1a1aa;
+      cursor: pointer;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .comment-item .comment-actions button:hover {
+      background: #52525b;
+      color: #fff;
+    }
+    .comment-item .comment-actions .btn-delete:hover { background: #dc2626; color: #fff; }
+    .comment-item .comment-edit-input {
+      width: 100%;
+      background: #27272a;
+      border: 1px solid #3b82f6;
+      border-radius: 6px;
+      color: #e4e4e7;
+      padding: 6px 8px;
+      font-size: 0.875rem;
+      margin-bottom: 4px;
+      box-sizing: border-box;
+    }
+    .comment-item .comment-edit-input:focus { outline: none; }
+    .comment-form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .comment-form input {
+      flex: 1;
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 20px;
+      color: #e4e4e7;
+      padding: 10px 14px;
+      font-size: 0.875rem;
+    }
+    .comment-form input::placeholder { color: #71717a; }
+    .comment-form input:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+    .comment-form .btn-post {
+      padding: 8px 16px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 20px;
+      color: #fff;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .comment-form .btn-post:hover { background: #2563eb; }
+    .new-task-row {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+    }
+    .btn-new-task {
+      padding: 14px 32px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-new-task:hover { background: #2563eb; }
+    .placeholder-text { color: #71717a; }
+    /* Confirm delete dialog */
+    .confirm-dialog-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+    }
+    .confirm-dialog-overlay.active { display: flex; }
+    .confirm-dialog {
+      background: #252529;
+      border: 1px solid #3f3f46;
+      border-radius: 12px;
+      padding: 24px;
+      min-width: 320px;
+      max-width: 90vw;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    .confirm-dialog h3 {
+      margin: 0 0 12px;
+      font-size: 1.125rem;
+      color: #fafafa;
+    }
+    .confirm-dialog p {
+      margin: 0 0 20px;
+      color: #a1a1aa;
+      font-size: 0.9375rem;
+    }
+    .confirm-dialog-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+    .confirm-dialog-actions button {
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+    }
+    .confirm-dialog-actions .btn-cancel {
+      background: #3f3f46;
+      color: #e4e4e7;
+    }
+    .confirm-dialog-actions .btn-cancel:hover { background: #52525b; }
+    .confirm-dialog-actions .btn-confirm-delete {
+      background: #dc2626;
+      color: #fff;
+    }
+    .confirm-dialog-actions .btn-confirm-delete:hover { background: #b91c1c; }
+    /* Project gate: เลือก Project + Passkey */
+    #project-gate {
+      position: fixed;
+      inset: 0;
+      background: #1a1a1e;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #project-gate.hidden { display: none; }
+    .project-gate-box {
+      background: #252529;
+      border: 1px solid #3f3f46;
+      border-radius: 12px;
+      padding: 28px;
+      min-width: 320px;
+      max-width: 420px;
+      width: 100%;
+    }
+    .project-gate-box h2 {
+      margin: 0 0 20px;
+      font-size: 1.25rem;
+      color: #fafafa;
+    }
+    .project-gate-box label {
+      display: block;
+      font-size: 0.8125rem;
+      color: #a1a1aa;
+      margin-bottom: 6px;
+    }
+    .project-gate-box input, .project-gate-box select {
+      width: 100%;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      color: #e4e4e7;
+      font-size: 0.9375rem;
+      box-sizing: border-box;
+    }
+    .project-gate-box .btn-load, .project-gate-box .btn-create-project {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    .project-gate-box .btn-load { background: #3b82f6; color: #fff; }
+    .project-gate-box .btn-load:hover { background: #2563eb; }
+    .project-gate-box .btn-create-project { background: #3f3f46; color: #e4e4e7; margin-top: 20px; }
+    .project-gate-box .btn-create-project:hover { background: #52525b; }
+    .project-gate-box .gate-error { color: #dc2626; font-size: 0.8125rem; margin-top: 8px; }
+    .project-gate-box hr { border: none; border-top: 1px solid #3f3f46; margin: 24px 0 20px; }
+    .project-gate-box .project-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .project-gate-box .project-card {
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .project-gate-box .project-card:hover {
+      border-color: #3b82f6;
+      background: #27272a;
+    }
+    .project-gate-box .project-card .project-card-name {
+      font-size: 0.9375rem;
+      color: #e4e4e7;
+      word-break: break-word;
+    }
+    /* Passkey dialog (เปิดหลังเลือกการ์ด) */
+    #passkey-dialog-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 10001;
+      align-items: center;
+      justify-content: center;
+    }
+    #passkey-dialog-overlay.active { display: flex; }
+    #passkey-dialog-overlay .passkey-dialog-box {
+      background: #252529;
+      border: 1px solid #3f3f46;
+      border-radius: 12px;
+      padding: 24px;
+      min-width: 300px;
+    }
+    #passkey-dialog-overlay .passkey-dialog-box h3 { margin: 0 0 16px; font-size: 1.125rem; color: #fafafa; }
+    #passkey-dialog-overlay .passkey-dialog-box input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      color: #e4e4e7;
+      font-size: 0.9375rem;
+      box-sizing: border-box;
+    }
+    #passkey-dialog-overlay .passkey-input-wrap { margin-bottom: 16px; }
+    #passkey-dialog-overlay .passkey-input-wrap input { margin-bottom: 0; }
+    #passkey-dialog-overlay .passkey-dialog-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    #passkey-dialog-overlay .passkey-dialog-actions button {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      border: none;
+    }
+    #passkey-dialog-overlay .passkey-dialog-cancel { background: #3f3f46; color: #e4e4e7; }
+    #passkey-dialog-overlay .passkey-dialog-load { background: #3b82f6; color: #fff; }
+    #passkey-dialog-overlay .passkey-dialog-error { color: #dc2626; font-size: 0.8125rem; margin-top: 8px; }
+    /* Passkey show/hide toggle */
+    .passkey-input-wrap {
+      position: relative;
+      margin-bottom: 16px;
+    }
+    .passkey-input-wrap input {
+      padding-right: 44px;
+      margin-bottom: 0;
+    }
+    .passkey-input-wrap .btn-toggle-passkey {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #a1a1aa;
+      cursor: pointer;
+      padding: 4px;
+      font-size: 1rem;
+      line-height: 1;
+    }
+    .passkey-input-wrap .btn-toggle-passkey:hover { color: #e4e4e7; }
+    .project-gate-box .passkey-input-wrap { margin-bottom: 16px; }
+    .project-gate-box .passkey-input-wrap input { margin-bottom: 0; }
+  </style>
+</head>
+<body>
+  <div id="project-gate">
+    <div class="project-gate-box">
+      <h2>Load Project</h2>
+      <p style="color:#a1a1aa;font-size:0.875rem;margin:0 0 12px;">เลือก Project ที่ต้องการเปิด</p>
+      <div id="gate-project-cards" class="project-cards-grid"></div>
+      <hr>
+      <h2 style="font-size:1rem;">New Project</h2>
+      <label for="gate-new-name">Project name</label>
+      <input type="text" id="gate-new-name" placeholder="Project name">
+      <label for="gate-new-passkey">Passkey</label>
+      <div class="passkey-input-wrap">
+        <input type="password" id="gate-new-passkey" placeholder="Passkey" autocomplete="off">
+        <button type="button" class="btn-toggle-passkey" id="gate-new-passkey-toggle" title="Show passkey" aria-label="Show passkey">👁</button>
+      </div>
+      <div id="gate-error" class="gate-error" style="display:none;"></div>
+      <button type="button" class="btn-create-project" id="gate-btn-create">Create &amp; Open</button>
+    </div>
+  </div>
+
+  <div id="passkey-dialog-overlay">
+    <div class="passkey-dialog-box">
+      <h3 id="passkey-dialog-title">Enter Passkey</h3>
+      <div class="passkey-input-wrap">
+        <input type="password" id="passkey-dialog-input" placeholder="Passkey" autocomplete="off">
+        <button type="button" class="btn-toggle-passkey" id="passkey-dialog-toggle" title="Show passkey" aria-label="Show passkey">👁</button>
+      </div>
+      <div id="passkey-dialog-error" class="passkey-dialog-error" style="display:none;"></div>
+      <div class="passkey-dialog-actions">
+        <button type="button" class="passkey-dialog-cancel">Cancel</button>
+        <button type="button" class="passkey-dialog-load">Load</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="edit-image-dialog">
+    <div class="edit-image-dialog-inner">
+      <div class="edit-image-dialog-bar">
+        <button type="button" class="btn-close-edit">ปิด</button>
+      </div>
+      <div class="edit-image-iframe-wrap">
+        <iframe id="edit-image-iframe" src="about:blank" title="Edit image"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-header">
+    <h1>Image Task & Result</h1>
+    <button type="button" class="btn-logout" id="btn-logout">Logout</button>
+  </div>
+
+  <div id="confirm-delete-dialog" class="confirm-dialog-overlay" aria-hidden="true">
+    <div class="confirm-dialog">
+      <h3>Confirm Delete</h3>
+      <p id="confirm-delete-message">Delete?</p>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-cancel">Cancel</button>
+        <button type="button" class="btn-confirm-delete">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="img-zoom-overlay" class="img-zoom-overlay" aria-hidden="true">
+    <button type="button" class="img-zoom-close" title="Close">✕</button>
+    <div class="img-zoom-wrap" id="img-zoom-wrap">
+      <img class="img-zoom-image" id="img-zoom-image" src="" alt="">
+    </div>
+    <div class="img-zoom-percent" id="img-zoom-percent">100%</div>
+  </div>
+
+  <div id="blocks">
+    <!-- Block 1 -->
+    <div class="block" data-block="0">
+      <button type="button" class="btn-delete-task" title="Delete task">Delete task</button>
+      <div class="col">
+        <span class="col-label">Image Task</span>
+        <div class="img-box" data-role="task-img" data-side="task" title="Click to upload image">
+          <input type="file" accept="image/*">
+          <span class="placeholder-text">imagetask (click to upload)</span>
+          <span class="upload-hint">📷</span>
+        </div>
+        <div class="comments" data-role="task-comments">
+          <div class="comment-feed"></div>
+          <div class="comment-form">
+            <input type="text" placeholder="Write a comment..." maxlength="500" autocomplete="off">
+            <button type="button" class="btn-post">Post</button>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="col-label">Image Result</span>
+        <div class="img-box" data-role="result-img" data-side="result" title="Click to upload image">
+          <input type="file" accept="image/*">
+          <span class="placeholder-text">image result (click to upload)</span>
+          <span class="upload-hint">📷</span>
+        </div>
+        <div class="comments" data-role="result-comments">
+          <div class="comment-feed"></div>
+          <div class="comment-form">
+            <input type="text" placeholder="Write a comment..." maxlength="500" autocomplete="off">
+            <button type="button" class="btn-post">Post</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="block-sep"></div>
+
+    <!-- Block 2 -->
+    <div class="block" data-block="1">
+      <button type="button" class="btn-delete-task" title="Delete task">Delete task</button>
+      <div class="col">
+        <span class="col-label">Image Task</span>
+        <div class="img-box" data-role="task-img" data-side="task" title="Click to upload image">
+          <input type="file" accept="image/*">
+          <span class="placeholder-text">imagetask (click to upload)</span>
+          <span class="upload-hint">📷</span>
+        </div>
+        <div class="comments" data-role="task-comments">
+          <div class="comment-feed"></div>
+          <div class="comment-form">
+            <input type="text" placeholder="Write a comment..." maxlength="500" autocomplete="off">
+            <button type="button" class="btn-post">Post</button>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="col-label">Image Result</span>
+        <div class="img-box" data-role="result-img" data-side="result" title="Click to upload image">
+          <input type="file" accept="image/*">
+          <span class="placeholder-text">image result (click to upload)</span>
+          <span class="upload-hint">📷</span>
+        </div>
+        <div class="comments" data-role="result-comments">
+          <div class="comment-feed"></div>
+          <div class="comment-form">
+            <input type="text" placeholder="Write a comment..." maxlength="500" autocomplete="off">
+            <button type="button" class="btn-post">Post</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="block-sep"></div>
+
+    <!-- New task button row -->
+    <div class="new-task-row">
+      <button type="button" class="btn-new-task" id="btn-new-task">new task +</button>
+    </div>
+  </div>
+
+  <script>
+    function nowStr() {
+      return new Date().toLocaleString();
+    }
+
+    function postComment(commentsEl, text) {
+      postCommentWithTime(commentsEl, text, nowStr());
+    }
+
+    function postCommentWithTime(commentsEl, text, datetime) {
+      text = (text || '').trim();
+      if (!text && !datetime) return;
+      var feed = commentsEl.querySelector('.comment-feed');
+      if (!feed) return;
+      var item = document.createElement('div');
+      item.className = 'comment-item';
+      item.innerHTML =
+        '<div class="comment-text"></div>' +
+        '<div class="comment-time">' + (datetime || nowStr()) + '</div>' +
+        '<div class="comment-actions">' +
+          '<button type="button" class="btn-edit" title="Edit">✎</button>' +
+          '<button type="button" class="btn-delete" title="Delete">✕</button>' +
+        '</div>';
+      item.querySelector('.comment-text').textContent = text;
+      feed.appendChild(item);
+      feed.scrollTop = feed.scrollHeight;
+    }
+
+    function editComment(item) {
+      var textEl = item.querySelector('.comment-text');
+      if (!textEl) return;
+      var current = textEl.textContent.trim();
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'comment-edit-input';
+      input.value = current;
+      input.maxLength = 500;
+      item.classList.add('editing');
+      textEl.style.display = 'none';
+      textEl.parentNode.insertBefore(input, textEl);
+      input.focus();
+      function save() {
+        var val = input.value.trim();
+        if (val) textEl.textContent = val;
+        textEl.style.display = '';
+        input.remove();
+        item.classList.remove('editing');
+        updateDataJsonOnServer();
+      }
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); save(); }
+        if (e.key === 'Escape') { textEl.style.display = ''; input.remove(); item.classList.remove('editing'); }
+      });
+    }
+
+    function deleteComment(item) {
+      if (item && item.parentNode) {
+        item.parentNode.removeChild(item);
+        updateDataJsonOnServer();
+      }
+    }
+
+    // Use same origin when opened from Python server (http://localhost:5000)
+    var API_BASE = '';
+    var UPLOAD_URL = (API_BASE || '') + '/api/upload';
+    var currentProjectId = null;
+    var currentPasskey = '';
+
+    function getApiPrefix() {
+      var base = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : '';
+      if (base) return base;
+      return (window.location.pathname || '').replace(/\/[^/]*$/, '') || '';
+    }
+
+    function getUpdateDataUrl() {
+      var base = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : '';
+      if (base) return base + '/api/save';
+      var path = (window.location.pathname || '').replace(/\/[^/]*$/, '') || '';
+      return path + '/api/save';
+    }
+
+    function updateDataJsonOnServer() {
+      var data;
+      try {
+        data = collectData();
+      } catch (err) {
+        console.warn('collectData failed:', err);
+        showSaveStatus('error');
+        return;
+      }
+      var url = getUpdateDataUrl();
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+        .then(function (r) {
+          if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+          return r.json();
+        })
+        .then(function (res) {
+          showSaveStatus('ok', res && res.dataJsonUpdated);
+        })
+        .catch(function (err) {
+          console.warn('Update data.json failed:', err);
+          showSaveStatus('error');
+        });
+    }
+
+    function showSaveStatus(status, dataJsonUpdated) {
+      var el = document.getElementById('save-status');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'save-status';
+        el.style.cssText = 'position:fixed;bottom:16px;right:16px;padding:8px 14px;border-radius:8px;font-size:0.8125rem;z-index:9999;transition:opacity 0.3s;';
+        document.body.appendChild(el);
+      }
+      el.textContent = status === 'ok'
+        ? (dataJsonUpdated ? 'Saved (data.json updated)' : 'Saved')
+        : 'Save failed';
+      el.style.background = status === 'ok' ? '#22c55e' : '#dc2626';
+      el.style.color = '#fff';
+      el.style.opacity = '1';
+      clearTimeout(el._hide);
+      el._hide = setTimeout(function () { el.style.opacity = '0'; }, 2500);
+    }
+
+    function getImgBoxFilename(imgBox) {
+      return imgBox.getAttribute('data-filename') || null;
+    }
+
+    function getImgBoxKey(imgBox) {
+      return imgBox.getAttribute('data-image-key') || null;
+    }
+
+    function getCommentsData(commentsEl) {
+      var items = commentsEl.querySelectorAll('.comment-item');
+      return Array.from(items).map(function (item) {
+        var text = item.querySelector('.comment-text');
+        var time = item.querySelector('.comment-time');
+        return {
+          comment: text ? text.textContent.trim() : '',
+          datetime: time ? time.textContent.trim() : ''
+        };
+      });
+    }
+
+    function createBlock(index, skipBind) {
+      const sep = document.createElement('div');
+      sep.className = 'block-sep';
+      const block = document.createElement('div');
+      block.className = 'block';
+      block.dataset.block = String(index);
+      block.innerHTML =
+        '<button type="button" class="btn-delete-task" title="Delete task">Delete task</button>' +
+        '<div class="col">' +
+          '<span class="col-label">Image Task</span>' +
+          '<div class="img-box" data-role="task-img" data-side="task" title="Click to upload image">' +
+            '<input type="file" accept="image/*">' +
+            '<span class="placeholder-text">imagetask (click to upload)</span>' +
+            '<span class="upload-hint">📷</span>' +
+          '</div>' +
+          '<div class="comments" data-role="task-comments">' +
+            '<div class="comment-feed"></div>' +
+            '<div class="comment-form"><input type="text" placeholder="Write a comment..." maxlength="500" autocomplete="off"><button type="button" class="btn-post">Post</button></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="col">' +
+          '<span class="col-label">Image Result</span>' +
+          '<div class="img-box" data-role="result-img" data-side="result" title="Click to upload image">' +
+            '<input type="file" accept="image/*">' +
+            '<span class="placeholder-text">image result (click to upload)</span>' +
+            '<span class="upload-hint">📷</span>' +
+          '</div>' +
+          '<div class="comments" data-role="result-comments">' +
+            '<div class="comment-feed"></div>' +
+            '<div class="comment-form"><input type="text" placeholder="Write a comment..." maxlength="500" autocomplete="off"><button type="button" class="btn-post">Post</button></div>' +
+          '</div>' +
+        '</div>';
+      if (!skipBind) bindBlockEvents(block);
+      return { block, sep };
+    }
+
+    function addImageActions(box) {
+      if (box.querySelector('.img-actions')) return;
+      var actions = document.createElement('div');
+      actions.className = 'img-actions';
+      actions.innerHTML = '<button type="button" class="btn-edit-img" title="Edit">✎</button><button type="button" class="btn-replace-img" title="Change image">↻</button><button type="button" class="btn-delete-img" title="Delete">✕</button>';
+      box.appendChild(actions);
+      box.classList.add('has-image');
+    }
+
+    function setBoxImageFromUrl(box, imageUrl, filename) {
+      if (!imageUrl) return;
+      var span = box.querySelector('.placeholder-text');
+      var hint = box.querySelector('.upload-hint');
+      if (span) span.remove();
+      if (hint) hint.remove();
+      var img = box.querySelector('img');
+      if (!img) {
+        img = document.createElement('img');
+        box.appendChild(img);
+      }
+      img.removeAttribute('data-blobUrl');
+      img.onerror = function () {
+        img.style.background = '#3f3f46';
+        img.alt = 'Load failed: ' + (filename || '');
+      };
+      img.onload = function () { img.onerror = null; };
+      img.src = imageUrl;
+      if (filename) box.setAttribute('data-filename', filename);
+      box.classList.add('has-image');
+      addImageActions(box);
+    }
+
+    function getDataAndImageBase() {
+      var base = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : '';
+      var path = (window.location.pathname || '').replace(/\/[^/]*$/, '') || '';
+      var prefix = base || path;
+      return {
+        dataUrl: prefix + '/api/data',
+        dataUrlFallback: prefix + '/data.json',
+        imageBase: prefix + '/image/'
+      };
+    }
+
+    function applyProjectData(data) {
+      if (!data || !data.tasks || !Array.isArray(data.tasks) || data.tasks.length === 0) return;
+      var imageIndex = data.imageIndex || {};
+      var tasks = data.tasks;
+      var container = document.getElementById('blocks');
+      var newTaskRow = container.querySelector('.new-task-row');
+      if (!newTaskRow) return;
+      var bases = getDataAndImageBase();
+      var imageBase = bases.imageBase;
+      if (imageBase.length && imageBase.charAt(imageBase.length - 1) !== '/') imageBase += '/';
+      while (container.firstChild && container.firstChild !== newTaskRow) container.removeChild(container.firstChild);
+      for (var i = 0; i < tasks.length; i++) {
+        var out = createBlock(i, true);
+        var block = out.block;
+        var sep = out.sep;
+        container.insertBefore(sep, newTaskRow);
+        container.insertBefore(block, newTaskRow);
+        var taskImgBox = block.querySelector('[data-role="task-img"]');
+        var resultImgBox = block.querySelector('[data-role="result-img"]');
+        var taskCommentsEl = block.querySelector('[data-role="task-comments"]');
+        var resultCommentsEl = block.querySelector('[data-role="result-comments"]');
+        var taskKey = tasks[i].taskImage;
+        var resultKey = tasks[i].resultImage;
+        var taskFilename = imageIndex[taskKey];
+        var resultFilename = imageIndex[resultKey];
+        if (taskImgBox && taskFilename) setBoxImageFromUrl(taskImgBox, imageBase + taskFilename, taskFilename);
+        if (resultImgBox && resultFilename) setBoxImageFromUrl(resultImgBox, imageBase + resultFilename, resultFilename);
+        if (taskCommentsEl && tasks[i].taskComments && tasks[i].taskComments.length) {
+          tasks[i].taskComments.forEach(function (c) {
+            postCommentWithTime(taskCommentsEl, c.comment, c.datetime);
+          });
+        }
+        if (resultCommentsEl && tasks[i].resultComments && tasks[i].resultComments.length) {
+          tasks[i].resultComments.forEach(function (c) {
+            postCommentWithTime(resultCommentsEl, c.comment, c.datetime);
+          });
+        }
+      }
+      container.querySelectorAll('.block').forEach(bindBlockEvents);
+    }
+
+    function loadDataFromJson() {
+      var bases = getDataAndImageBase();
+      var dataUrl = bases.dataUrl + (bases.dataUrl.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+      var fallbackUrl = bases.dataUrlFallback + (bases.dataUrlFallback.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+      console.log('[Load data] Fetching:', dataUrl);
+      function doFetch(url) {
+        return fetch(url).then(function (r) {
+          if (!r.ok) return Promise.reject(new Error(r.status + ' ' + r.statusText));
+          return r.json();
+        });
+      }
+      return doFetch(dataUrl)
+        .catch(function (err) {
+          console.warn('[Load data] /api/data failed, trying /data.json:', err.message);
+          return doFetch(fallbackUrl);
+        })
+        .then(function (data) { return data; })
+        .catch(function (err) {
+          console.error('[Load data] Fetch or parse error:', err);
+          return null;
+        })
+        .then(function (data) {
+          if (!data) {
+            console.warn('[Load data] No data, using default blocks');
+            return false;
+          }
+          if (!data.tasks || !Array.isArray(data.tasks)) {
+            console.warn('[Load data] Invalid data: missing or invalid tasks', data);
+            return false;
+          }
+          if (data.tasks.length === 0) {
+            console.warn('[Load data] Empty tasks, using default blocks');
+            return false;
+          }
+          var imageIndex = data.imageIndex || {};
+          var tasks = data.tasks;
+          var container = document.getElementById('blocks');
+          var newTaskRow = container.querySelector('.new-task-row');
+          if (!newTaskRow) {
+            console.error('[Load data] DOM: .new-task-row not found');
+            return false;
+          }
+          try {
+            applyProjectData(data);
+            console.log('[Load data] Loaded', data.tasks.length, 'tasks');
+            return true;
+          } catch (err) {
+            console.error('[Load data] Error building UI:', err);
+            return false;
+          }
+        });
+    }
+
+    function removeImage(box) {
+      var img = box.querySelector('img');
+      if (img) {
+        if (img.dataset.blobUrl) try { URL.revokeObjectURL(img.dataset.blobUrl); } catch (_) {}
+        img.remove();
+      }
+      var actions = box.querySelector('.img-actions');
+      if (actions) actions.remove();
+      box.classList.remove('has-image');
+      box.removeAttribute('data-filename');
+      var placeholder = document.createElement('span');
+      placeholder.className = 'placeholder-text';
+      placeholder.textContent = box.getAttribute('data-role') === 'task-img' ? 'imagetask (click to upload)' : 'image result (click to upload)';
+      var hint = document.createElement('span');
+      hint.className = 'upload-hint';
+      hint.textContent = '📷';
+      box.appendChild(placeholder);
+      box.appendChild(hint);
+      var input = box.querySelector('input[type="file"]');
+      if (input) input.value = '';
+      updateDataJsonOnServer();
+    }
+
+    var imgZoomScale = 0.9;
+    var imgZoomOffsetX = 0;
+    var imgZoomOffsetY = 0;
+    var imgZoomMountX = 0;
+    var imgZoomMountY = 0;
+
+    function imgZoomReset() {
+      imgZoomOffsetX = 0;
+      imgZoomOffsetY = 0;
+      imgZoomMountX = 0;
+      imgZoomMountY = 0;
+      imgZoomScale = 0.9;
+    }
+
+    function imgZoomApplyTransform() {
+      var wrap = document.getElementById('img-zoom-wrap');
+      if (!wrap) return;
+      wrap.style.transform = 'translate(' + imgZoomOffsetX + 'px,' + imgZoomOffsetY + 'px) scale(' + imgZoomScale.toFixed(1) + ')';
+    }
+
+    function imgZoomShowPercent() {
+      var el = document.getElementById('img-zoom-percent');
+      if (!el) return;
+      var cal = ((imgZoomScale - 1) * 100);
+      var cal_ = (cal < 10 && cal > 0) ? 0 : (cal > -10 && cal < 0) ? 0 : Math.round(cal);
+      el.textContent = cal_ + '%';
+      el.classList.add('show');
+      clearTimeout(el._zoomHide);
+      el._zoomHide = setTimeout(function () { el.classList.remove('show'); }, 3000);
+    }
+
+    function openLightbox(src) {
+      var overlay = document.getElementById('img-zoom-overlay');
+      var wrap = document.getElementById('img-zoom-wrap');
+      var imgEl = document.getElementById('img-zoom-image');
+      if (!overlay || !wrap || !imgEl) return;
+      imgZoomReset();
+      imgEl.src = src;
+      wrap.style.left = '';
+      wrap.style.top = '';
+      imgZoomApplyTransform();
+      overlay.classList.add('active');
+      overlay.setAttribute('aria-hidden', 'false');
+      overlay.addEventListener('wheel', imgZoomOnWheel, { passive: false });
+      overlay.addEventListener('mousedown', imgZoomStartDrag);
+      wrap.addEventListener('mousedown', imgZoomStartDrag);
+    }
+
+    function closeLightbox() {
+      var overlay = document.getElementById('img-zoom-overlay');
+      if (!overlay) return;
+      overlay.classList.remove('active');
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.removeEventListener('wheel', imgZoomOnWheel);
+      overlay.removeEventListener('mousedown', imgZoomStartDrag);
+      var wrap = document.getElementById('img-zoom-wrap');
+      if (wrap) wrap.removeEventListener('mousedown', imgZoomStartDrag);
+      document.removeEventListener('mousemove', imgZoomDrag);
+      document.removeEventListener('mouseup', imgZoomEndDrag);
+    }
+
+    function imgZoomOnWheel(e) {
+      e.preventDefault();
+      if (e.deltaY > 0) {
+        if (imgZoomScale > 2) imgZoomScale = Math.max(0.2, imgZoomScale - 0.1);
+        else if (imgZoomScale > 1) imgZoomScale = Math.max(0.2, imgZoomScale - 0.2);
+        else imgZoomScale = Math.max(0.2, imgZoomScale - 0.1);
+      } else {
+        if (imgZoomScale > 2) imgZoomScale = Math.min(20, imgZoomScale + 1);
+        else if (imgZoomScale > 1) imgZoomScale = Math.min(20, imgZoomScale + 0.2);
+        else imgZoomScale = Math.min(20, imgZoomScale + 0.1);
+      }
+      imgZoomApplyTransform();
+      imgZoomShowPercent();
+    }
+
+    function imgZoomStartDrag(e) {
+      imgZoomMountX = e.clientX;
+      imgZoomMountY = e.clientY;
+      e.preventDefault();
+      document.addEventListener('mousemove', imgZoomDrag);
+      document.addEventListener('mouseup', imgZoomEndDrag);
+    }
+
+    function imgZoomDrag(e) {
+      e.preventDefault();
+      var dx = imgZoomMountX - e.clientX;
+      var dy = imgZoomMountY - e.clientY;
+      imgZoomOffsetX -= dx;
+      imgZoomOffsetY -= dy;
+      imgZoomMountX = e.clientX;
+      imgZoomMountY = e.clientY;
+      imgZoomApplyTransform();
+    }
+
+    function imgZoomEndDrag() {
+      document.removeEventListener('mousemove', imgZoomDrag);
+      document.removeEventListener('mouseup', imgZoomEndDrag);
+    }
+
+    function uploadImage(file, box, blockIndex, side) {
+      const key = side + '_' + blockIndex;
+      box.setAttribute('data-image-key', key);
+      const form = new FormData();
+      form.append('image', file);
+      box.classList.add('uploading');
+      fetch(UPLOAD_URL, { method: 'POST', body: form })
+        .then(function (r) {
+          if (!r.ok) throw new Error('Upload failed');
+          return r.json();
+        })
+        .then(function (data) {
+          const filename = data.filename;
+          box.setAttribute('data-filename', filename);
+          box.classList.remove('uploading');
+          const span = box.querySelector('.placeholder-text');
+          const hint = box.querySelector('.upload-hint');
+          if (span) span.remove();
+          if (hint) hint.remove();
+          let img = box.querySelector('img');
+          if (!img) {
+            img = document.createElement('img');
+            box.appendChild(img);
+          }
+          if (img.dataset.blobUrl) try { URL.revokeObjectURL(img.dataset.blobUrl); } catch (_) {}
+          var previewUrl = URL.createObjectURL(file);
+          img.src = previewUrl;
+          img.dataset.blobUrl = previewUrl;
+          addImageActions(box);
+          updateDataJsonOnServer();
+        })
+        .catch(function (err) {
+          box.classList.remove('uploading');
+          alert('Upload failed: ' + (err.message || err));
+        });
+    }
+
+    function bindCommentForm(form) {
+      var commentsEl = form.closest('.comments');
+      var input = form.querySelector('input');
+      if (!commentsEl || !input) return;
+      function submit() {
+        postComment(commentsEl, input.value);
+        input.value = '';
+        updateDataJsonOnServer();
+      }
+      form.querySelector('.btn-post').addEventListener('click', submit);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submit(); }
+      });
+    }
+
+    function bindBlockEvents(block) {
+      var blockIndex = (block.getAttribute && block.getAttribute('data-block')) !== null
+        ? block.getAttribute('data-block') : String(document.querySelectorAll('#blocks .block').length - 1);
+      block.querySelectorAll('.comment-form').forEach(bindCommentForm);
+      block.querySelectorAll('.img-box').forEach(function (box) {
+        const input = box.querySelector('input[type="file"]');
+        if (!input) return;
+        const side = box.getAttribute('data-role') === 'task-img' ? 'task' : 'result';
+        if (!box.getAttribute('data-image-key')) {
+          box.setAttribute('data-image-key', side + '_' + blockIndex);
+        }
+        box.addEventListener('click', function (e) {
+          if (e.target === input) return;
+          if (e.target.closest('.img-actions')) return;
+          if (e.target.tagName === 'IMG') {
+            openLightbox(e.target.src);
+            return;
+          }
+          input.click();
+        });
+        input.addEventListener('change', function () {
+          const file = input.files && input.files[0];
+          if (!file || !file.type.startsWith('image/')) return;
+          uploadImage(file, box, blockIndex, side);
+        });
+      });
+    }
+
+    function collectData() {
+      const blocks = document.querySelectorAll('#blocks .block');
+      const imageIndex = {};
+      const tasks = [];
+      blocks.forEach(function (block, i) {
+        const taskImgBox = block.querySelector('[data-role="task-img"]');
+        const resultImgBox = block.querySelector('[data-role="result-img"]');
+        const taskComments = block.querySelector('[data-role="task-comments"]');
+        const resultComments = block.querySelector('[data-role="result-comments"]');
+        var taskKey = 'task_' + i;
+        var resultKey = 'result_' + i;
+        var taskFilename = taskImgBox ? getImgBoxFilename(taskImgBox) : null;
+        var resultFilename = resultImgBox ? getImgBoxFilename(resultImgBox) : null;
+        if (taskFilename) imageIndex[taskKey] = taskFilename;
+        if (resultFilename) imageIndex[resultKey] = resultFilename;
+        tasks.push({
+          taskImage: taskKey,
+          resultImage: resultKey,
+          taskComments: taskComments ? getCommentsData(taskComments) : [],
+          resultComments: resultComments ? getCommentsData(resultComments) : []
+        });
+      });
+      var out = {
+        savedAt: nowStr(),
+        imageIndex: imageIndex,
+        tasks: tasks
+      };
+      if (currentProjectId !== null) {
+        out.projectId = currentProjectId;
+        out.passkey = currentPasskey;
+      }
+      return out;
+    }
+
+    function deleteTaskBlock(block) {
+      if (!block || !block.parentNode) return;
+      var prev = block.previousElementSibling;
+      var next = block.nextElementSibling;
+      if (prev && prev.classList.contains('block-sep')) prev.remove();
+      else if (next && next.classList.contains('block-sep')) next.remove();
+      block.remove();
+      updateDataJsonOnServer();
+    }
+
+    var pendingDeleteCallback = null;
+
+    function showConfirmDeleteDialog(message, onConfirm) {
+      var msgEl = document.getElementById('confirm-delete-message');
+      if (msgEl) msgEl.textContent = message || 'Delete?';
+      pendingDeleteCallback = onConfirm;
+      var dialog = document.getElementById('confirm-delete-dialog');
+      if (dialog) {
+        dialog.classList.add('active');
+        dialog.setAttribute('aria-hidden', 'false');
+      }
+    }
+
+    function closeConfirmDeleteDialog() {
+      pendingDeleteCallback = null;
+      var dialog = document.getElementById('confirm-delete-dialog');
+      if (dialog) {
+        dialog.classList.remove('active');
+        dialog.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    function initConfirmDeleteDialog() {
+      var dialog = document.getElementById('confirm-delete-dialog');
+      if (!dialog) return;
+      dialog.querySelector('.btn-cancel').addEventListener('click', function () {
+        closeConfirmDeleteDialog();
+      });
+      dialog.querySelector('.btn-confirm-delete').addEventListener('click', function () {
+        if (typeof pendingDeleteCallback === 'function') {
+          pendingDeleteCallback();
+          closeConfirmDeleteDialog();
+        }
+      });
+      dialog.addEventListener('click', function (e) {
+        if (e.target === dialog) closeConfirmDeleteDialog();
+      });
+      document.addEventListener('keydown', function onConfirmKey(e) {
+        if (e.key === 'Escape' && dialog.classList.contains('active')) {
+          closeConfirmDeleteDialog();
+        }
+      });
+    }
+
+    function initEditImageDialog() {
+      var editDialog = document.getElementById('edit-image-dialog');
+      if (!editDialog) return;
+      var btnClose = editDialog.querySelector('.btn-close-edit');
+      var iframe = document.getElementById('edit-image-iframe');
+      function closeEditDialog() {
+        editDialog.classList.remove('active');
+        if (iframe) iframe.src = 'about:blank';
+      }
+      if (btnClose) btnClose.addEventListener('click', closeEditDialog);
+      editDialog.addEventListener('click', function (e) {
+        if (e.target === editDialog) closeEditDialog();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && editDialog.classList.contains('active')) closeEditDialog();
+      });
+      window.addEventListener('message', function (e) {
+        if (e.data && e.data.type === 'editimage-saved' && window._editImageBox) {
+          var box = window._editImageBox;
+          var img = box && box.querySelector('img');
+          if (img && img.src) {
+            var base = img.src.split('?')[0];
+            img.src = base + '?t=' + Date.now();
+          }
+        }
+      });
+    }
+
+    document.getElementById('blocks').addEventListener('click', function (e) {
+      var btn = e.target.closest('button');
+      var box = e.target.closest('.img-box');
+      if (box && e.target.closest('.btn-delete-img')) {
+        e.preventDefault();
+        showConfirmDeleteDialog('Delete this image?', function () { removeImage(box); });
+        return;
+      }
+      if (box && e.target.closest('.btn-edit-img')) {
+        e.preventDefault();
+        var imgEl = box.querySelector('img');
+        var src = imgEl && imgEl.src;
+        var editDialog = document.getElementById('edit-image-dialog');
+        var editIframe = document.getElementById('edit-image-iframe');
+        if (editDialog && editIframe) {
+          window._editImageBox = box;
+          var url = 'editimage.html';
+          if (src) {
+            var absUrl = src;
+            if (src.indexOf('/') === 0) absUrl = window.location.origin + src;
+            url += '?image=' + encodeURIComponent(absUrl);
+          }
+          editIframe.src = url;
+          editDialog.classList.add('active');
+        }
+        return;
+      }
+      if (box && e.target.closest('.btn-replace-img')) {
+        e.preventDefault();
+        box.querySelector('input[type="file"]').click();
+        return;
+      }
+      if (btn && btn.classList.contains('btn-delete-task')) {
+        e.preventDefault();
+        var block = btn.closest('.block');
+        if (block) showConfirmDeleteDialog('Delete this task? This cannot be undone.', function () { deleteTaskBlock(block); });
+        return;
+      }
+      if (!btn) return;
+      if (btn.id === 'btn-new-task') {
+        var blocks = document.getElementById('blocks');
+        var index = blocks.querySelectorAll('.block').length;
+        var out = createBlock(index);
+        var newTaskRow = blocks.querySelector('.new-task-row');
+        blocks.insertBefore(out.sep, newTaskRow);
+        blocks.insertBefore(out.block, newTaskRow);
+        updateDataJsonOnServer();
+        return;
+      }
+      var item = e.target.closest('.comment-item');
+      if (item && btn.classList.contains('btn-edit')) {
+        e.preventDefault();
+        editComment(item);
+      }
+      if (item && btn.classList.contains('btn-delete')) {
+        e.preventDefault();
+        showConfirmDeleteDialog('Delete this comment?', function () { deleteComment(item); });
+      }
+    });
+
+    var imgZoomOverlay = document.getElementById('img-zoom-overlay');
+    if (imgZoomOverlay) {
+      imgZoomOverlay.querySelector('.img-zoom-close').addEventListener('click', closeLightbox);
+      imgZoomOverlay.addEventListener('click', function (e) {
+        if (e.target === imgZoomOverlay) closeLightbox();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && imgZoomOverlay.classList.contains('active')) closeLightbox();
+      });
+    }
+
+    initConfirmDeleteDialog();
+    initEditImageDialog();
+
+    function showGateError(msg) {
+      var el = document.getElementById('gate-error');
+      if (el) { el.textContent = msg || ''; el.style.display = msg ? 'block' : 'none'; }
+    }
+
+    function initProjectGate() {
+      var gate = document.getElementById('project-gate');
+      var cardsContainer = document.getElementById('gate-project-cards');
+      var newNameInput = document.getElementById('gate-new-name');
+      var newPasskeyInput = document.getElementById('gate-new-passkey');
+      var createBtn = document.getElementById('gate-btn-create');
+      var passkeyOverlay = document.getElementById('passkey-dialog-overlay');
+      var passkeyInput = document.getElementById('passkey-dialog-input');
+      var passkeyTitle = document.getElementById('passkey-dialog-title');
+      var passkeyError = document.getElementById('passkey-dialog-error');
+      var passkeyLoadBtn = passkeyOverlay && passkeyOverlay.querySelector('.passkey-dialog-load');
+      var passkeyCancelBtn = passkeyOverlay && passkeyOverlay.querySelector('.passkey-dialog-cancel');
+      var selectedProjectId = null;
+      var selectedProjectName = '';
+      if (!gate || !cardsContainer) return;
+
+      function hideGate() {
+        gate.classList.add('hidden');
+      }
+
+      function fetchProjects() {
+        var prefix = getApiPrefix();
+        return fetch(prefix + '/api/projects').then(function (r) { return r.json(); });
+      }
+
+      function fillProjectCards(projects) {
+        cardsContainer.innerHTML = '';
+        (projects || []).forEach(function (p) {
+          var card = document.createElement('div');
+          card.className = 'project-card';
+          card.setAttribute('data-project-id', p.id);
+          var nameEl = document.createElement('span');
+          nameEl.className = 'project-card-name';
+          nameEl.textContent = p.name || p.id;
+          card.appendChild(nameEl);
+          card.addEventListener('click', function () {
+            selectedProjectId = p.id;
+            selectedProjectName = p.name || p.id;
+            passkeyTitle.textContent = 'Enter Passkey — ' + selectedProjectName;
+            if (passkeyInput) { passkeyInput.value = ''; passkeyInput.focus(); }
+            if (passkeyError) { passkeyError.textContent = ''; passkeyError.style.display = 'none'; }
+            if (passkeyOverlay) passkeyOverlay.classList.add('active');
+          });
+          cardsContainer.appendChild(card);
+        });
+      }
+
+      function closePasskeyDialog() {
+        if (passkeyOverlay) passkeyOverlay.classList.remove('active');
+        if (passkeyInput) passkeyInput.value = '';
+        if (passkeyError) { passkeyError.textContent = ''; passkeyError.style.display = 'none'; }
+        selectedProjectId = null;
+      }
+
+      function showPasskeyError(msg) {
+        if (!passkeyError) return;
+        passkeyError.textContent = msg || '';
+        passkeyError.style.display = msg ? 'block' : 'none';
+      }
+
+      if (passkeyCancelBtn) {
+        passkeyCancelBtn.addEventListener('click', closePasskeyDialog);
+      }
+      if (passkeyOverlay) {
+        passkeyOverlay.addEventListener('click', function (e) {
+          if (e.target === passkeyOverlay) closePasskeyDialog();
+        });
+      }
+      if (passkeyInput) {
+        passkeyInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' && passkeyLoadBtn) passkeyLoadBtn.click();
+          if (e.key === 'Escape') closePasskeyDialog();
+        });
+      }
+
+      if (passkeyLoadBtn) {
+        passkeyLoadBtn.addEventListener('click', function () {
+          var projectId = selectedProjectId;
+          var passkey = (passkeyInput && passkeyInput.value) || '';
+          showPasskeyError('');
+          if (!projectId) { showPasskeyError('Select a project'); return; }
+          var prefix = getApiPrefix();
+          fetch(prefix + '/api/load-project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectId: projectId, passkey: passkey })
+          })
+            .then(function (r) {
+              if (r.status === 403) throw new Error('Invalid passkey');
+              if (!r.ok) throw new Error(r.statusText);
+              return r.json();
+            })
+            .then(function (res) {
+              if (!res.ok || !res.data) throw new Error('No data');
+              currentProjectId = projectId;
+              currentPasskey = passkey;
+              try {
+                sessionStorage.setItem('lastProjectId', projectId);
+                sessionStorage.setItem('passkey_' + projectId, passkey);
+              } catch (e) {}
+              applyProjectData(res.data);
+              closePasskeyDialog();
+              hideGate();
+            })
+            .catch(function (err) {
+              showPasskeyError(err.message || 'Load failed');
+            });
+        });
+      }
+
+      createBtn.addEventListener('click', function () {
+        var name = (newNameInput && newNameInput.value.trim()) || 'New Project';
+        var passkey = (newPasskeyInput && newPasskeyInput.value) || '';
+        showGateError('');
+        var prefix = getApiPrefix();
+        fetch(prefix + '/api/create-project', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, passkey: passkey })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (res) {
+            if (res.error) throw new Error(res.error);
+            var projectId = res.projectId;
+            currentProjectId = projectId;
+            currentPasskey = passkey;
+            return fetch(prefix + '/api/load-project', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ projectId: projectId, passkey: passkey })
+            });
+          })
+          .then(function (r) { return r.json(); })
+          .then(function (res) {
+            if (!res.ok || !res.data) return;
+            applyProjectData(res.data);
+            try {
+              sessionStorage.setItem('lastProjectId', currentProjectId);
+              sessionStorage.setItem('passkey_' + currentProjectId, currentPasskey);
+            } catch (e) {}
+            return fetchProjects();
+          })
+          .then(function (res) {
+            if (res && res.projects) fillProjectCards(res.projects);
+            hideGate();
+          })
+          .catch(function (err) {
+            showGateError(err.message || 'Create failed');
+          });
+      });
+
+      function tryLoadFromSession() {
+        var lastId = null;
+        var savedPasskey = null;
+        try {
+          lastId = sessionStorage.getItem('lastProjectId');
+          if (lastId) savedPasskey = sessionStorage.getItem('passkey_' + lastId);
+        } catch (e) { return; }
+        if (!lastId || savedPasskey === null) return;
+        var prefix = getApiPrefix();
+        fetch(prefix + '/api/load-project', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: lastId, passkey: savedPasskey })
+        })
+          .then(function (r) {
+            if (r.status === 403) throw new Error('Invalid passkey');
+            if (!r.ok) throw new Error(r.statusText);
+            return r.json();
+          })
+          .then(function (res) {
+            if (!res.ok || !res.data) return;
+            currentProjectId = lastId;
+            currentPasskey = savedPasskey;
+            applyProjectData(res.data);
+            hideGate();
+          })
+          .catch(function () {
+            /* show gate with project cards; user can pick project and enter passkey in dialog */
+          });
+      }
+
+      fetchProjects().then(function (res) {
+        fillProjectCards(res.projects || []);
+        tryLoadFromSession();
+      }).catch(function () {
+        fillProjectCards([]);
+      });
+
+      var btnLogout = document.getElementById('btn-logout');
+      if (btnLogout) {
+        btnLogout.addEventListener('click', function () {
+          try {
+            var lastId = sessionStorage.getItem('lastProjectId');
+            sessionStorage.removeItem('lastProjectId');
+            if (lastId) sessionStorage.removeItem('passkey_' + lastId);
+          } catch (e) {}
+          gate.classList.remove('hidden');
+        });
+      }
+    }
+
+    function initPasskeyToggles() {
+      document.querySelectorAll('.btn-toggle-passkey').forEach(function (btn) {
+        var wrap = btn.closest('.passkey-input-wrap');
+        var input = wrap && wrap.querySelector('input');
+        if (!input) return;
+        btn.addEventListener('click', function () {
+          var isHidden = input.type === 'password';
+          input.type = isHidden ? 'text' : 'password';
+          btn.textContent = isHidden ? '🙈' : '👁';
+          btn.setAttribute('title', isHidden ? 'Hide passkey' : 'Show passkey');
+          btn.setAttribute('aria-label', isHidden ? 'Hide passkey' : 'Show passkey');
+        });
+      });
+    }
+
+    initPasskeyToggles();
+    initProjectGate();
+  </script>
+</body>
+</html>

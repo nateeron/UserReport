@@ -1,0 +1,2068 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Image Annotator (No Backend)</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; font-family: system-ui; background:#0f1115; color:#e7eaf0; }
+    .bar { display:flex; gap:8px; align-items:center; padding:10px; border-bottom:1px solid #242833; background:#12151c; flex-wrap:wrap; }
+    .bar button, .bar input[type="color"] {
+      background:#171a21; color:#e7eaf0; border:1px solid #2a3040; border-radius:10px;
+      padding:8px 10px; font-size:14px;
+    }
+    .bar button.active { background:#3b82f6; color:#fff; border-color:#3b82f6; }
+    .tool-group { display:flex; gap:2px; border-radius:10px; overflow:hidden; border:1px solid #2a3040; }
+    .tool-group button {
+      width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center;
+      background:#171a21; color:#a1a1aa; border:none; border-right:1px solid #2a3040; cursor:pointer;
+      font-size:18px; line-height:1;
+    }
+    .tool-group button:last-child { border-right:none; }
+    .tool-group button:hover { background:#252830; color:#e7eaf0; }
+    .tool-group button.active { background:#3b82f6; color:#fff; }
+    .color-group { display:flex; align-items:center; gap:6px; }
+    .color-group label { font-size:12px; color:#a1a1aa; }
+    .color-group input[type="color"] { width:36px; height:36px; padding:2px; cursor:pointer; border-radius:8px; }
+    .bar-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .bar-row .label { font-size:11px; color:#71717a; margin-right:2px; }
+    .swatch-group { display:flex; gap:4px; align-items:center; flex-wrap:wrap; }
+    .swatch { width:24px; height:24px; border-radius:6px; border:2px solid #3f3f46; cursor:pointer; padding:0; }
+    .swatch:hover { border-color:#71717a; transform:scale(1.1); }
+    .swatch.active { border-color:#3b82f6; box-shadow:0 0 0 1px #3b82f6; }
+    .bar select { min-width:70px; background:#171a21; color:#e7eaf0; border:1px solid #2a3040; border-radius:8px; padding:6px 8px; font-size:13px; }
+    .line-type-group { display:flex; gap:2px; border-radius:8px; overflow:hidden; border:1px solid #2a3040; }
+    .line-type-group button {
+      width:36px; height:36px; padding:0; border:none; background:#171a21; color:#a1a1aa; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .line-type-group button:hover { background:#252830; color:#e7eaf0; }
+    .line-type-group button.active { background:#3b82f6; color:#fff; }
+    .line-type-group .line-icon { width:20px; height:0; border-bottom:3px solid currentColor; }
+    .line-type-group .line-icon-dashed { border-bottom-style: dashed; }
+    .line-type-group .line-icon-dotted { border-bottom-style: dotted; border-bottom-width: 2px; }
+    .bar input[type="number"] { width:52px; background:#171a21; color:#e7eaf0; border:1px solid #2a3040; border-radius:8px; padding:6px 8px; font-size:13px; }
+    .bar input[type="text"] { min-width:120px; background:#171a21; color:#e7eaf0; border:1px solid #2a3040; border-radius:8px; padding:6px 8px; font-size:13px; }
+    .bar { flex-direction: column; align-items: flex-start; }
+    /* Dialog แก้ไขวัตถุที่เลือก - ลอยและลากย้ายได้ */
+    #edit-dialog {
+      display: none;
+      position: fixed;
+      top: 80px;
+      left: 20px;
+      width: 320px;
+      min-width: 280px;
+      z-index: 2000;
+      background: #1e2128;
+      border: 1px solid #2a3040;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    #edit-dialog.visible { display: block; }
+    #edit-dialog .edit-dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #252830;
+      border-bottom: 1px solid #2a3040;
+      cursor: move;
+      user-select: none;
+    }
+    #edit-dialog .edit-dialog-header:active { cursor: grabbing; }
+    #edit-dialog .edit-dialog-close {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      margin-left: 8px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #a1a1aa;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    #edit-dialog .edit-dialog-close:hover { background: #3f3f46; color: #e7eaf0; }
+    #edit-dialog .edit-dialog-title { font-size: 13px; color: #e7eaf0; font-weight: 500; flex: 1; }
+    #edit-dialog .edit-dialog-body {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+    }
+    #edit-dialog .color-mini { width: 28px; height: 28px; padding: 0; border-radius: 6px; cursor: pointer; border: 1px solid #3f3f46; background: #171a21; }
+    #edit-dialog .label { font-size: 12px; color: #a1a1aa; }
+    #edit-dialog select, #edit-dialog input[type="number"], #edit-dialog input[type="text"] {
+      background: #171a21; color: #e7eaf0; border: 1px solid #2a3040; border-radius: 8px; padding: 6px 8px; font-size: 13px;
+    }
+    #edit-dialog input[type="text"] { min-width: 140px; }
+    #edit-dialog input[type="number"] { width: 52px; }
+    #edit-dialog .edit-dialog-body button { background: #3f3f46; color: #e7eaf0; border: 1px solid #2a3040; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+    #edit-dialog .edit-dialog-body button:hover { background: #52525b; }
+    #edit-dialog .edit-dialog-body #edit-delete { background: #7f1d1d; color: #fecaca; border-color: #991b1b; }
+    #edit-dialog .edit-dialog-body #edit-delete:hover { background: #991b1b; }
+    #edit-dialog .edit-text-group { width: 100%; margin-top: 10px; padding-top: 8px; border-top: 1px solid #2a3040; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+    #edit-dialog .edit-text-group:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+    /* Dialog ใส่ข้อความ + เลือกขอบ */
+    #text-dialog {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 360px;
+      max-width: 90vw;
+      z-index: 2100;
+      background: #1e2128;
+      border: 1px solid #2a3040;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      padding: 16px;
+    }
+    #text-dialog.visible { display: block; }
+    #text-dialog .text-dialog-title { font-size: 14px; color: #e7eaf0; margin-bottom: 12px; }
+    #text-dialog textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px;
+      margin-bottom: 12px;
+      background: #171a21;
+      color: #e7eaf0;
+      border: 1px solid #2a3040;
+      border-radius: 8px;
+      font-size: 14px;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    #text-dialog .text-dialog-border {
+      margin-bottom: 12px;
+    }
+    #text-dialog .text-dialog-border label { font-size: 12px; color: #a1a1aa; margin-right: 12px; }
+    #text-dialog .text-dialog-border input[type="radio"] { margin-right: 4px; }
+    #text-dialog .text-dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    #text-dialog .text-dialog-actions button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+    }
+    #text-dialog .text-dialog-actions .btn-cancel { background: #3f3f46; color: #e7eaf0; }
+    #text-dialog .text-dialog-actions .btn-ok { background: #3b82f6; color: #fff; }
+    /* Dialog ปรับขนาดพื้นที่รูป */
+    #canvas-size-dialog {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 320px;
+      z-index: 2100;
+      background: #1e2128;
+      border: 1px solid #2a3040;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      padding: 16px;
+    }
+    #canvas-size-dialog.visible { display: block; }
+    #canvas-size-dialog .dialog-title { font-size: 14px; color: #e7eaf0; margin-bottom: 12px; }
+    #canvas-size-dialog .dialog-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    #canvas-size-dialog .dialog-row .label { min-width: 70px; font-size: 13px; color: #a1a1aa; }
+    #canvas-size-dialog input[type="number"] { width: 80px; padding: 8px; background: #171a21; color: #e7eaf0; border: 1px solid #2a3040; border-radius: 8px; font-size: 14px; }
+    #canvas-size-dialog .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    #canvas-size-dialog .dialog-actions button { padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; border: none; }
+    #canvas-size-dialog .dialog-actions .btn-cancel { background: #3f3f46; color: #e7eaf0; }
+    #canvas-size-dialog .dialog-actions .btn-ok { background: #3b82f6; color: #fff; }
+    #canvas-size-dialog .canvas-pad-diagram { margin: 8px 0; font-size: 11px; color: #a1a1aa; }
+    #canvas-size-dialog .canvas-pad-diagram pre { margin: 0; font-family: inherit; }
+    #wrap { height: calc(100vh - 100px); display:flex; justify-content:center; align-items:center; overflow: auto; }
+    #canvas-zoom-wrap { display: inline-block; position: relative; transform-origin: center center; }
+    #canvas-border-overlay { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 2; }
+    #canvas-border-overlay.visible { pointer-events: auto; cursor: default; }
+    canvas { border:1px solid #242833; border-radius:12px; background:#0c0f14; max-width: 98vw; max-height: 92vh; cursor: crosshair; display: block; }
+    .hint { opacity:.8; font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <div class="bar-row">
+      <input id="file" type="file" accept="image/*">
+      <div class="tool-group" id="tool-group" role="group" aria-label="เครื่องมือ">
+        <button type="button" id="tool-arrow" title="Arrow" value="arrow">➤</button>
+        <button type="button" id="tool-line" title="เส้นตรง" value="line">—</button>
+        <button type="button" id="tool-box" title="Box" value="box">▢</button>
+        <button type="button" id="tool-highlight" title="Highlight" value="highlight">▣</button>
+        <button type="button" id="tool-text" title="Text" value="text">T</button>
+        <button type="button" id="tool-label" title="ป้ายเลขลำดับ (วงกลม 1,2,3...)" value="label">①</button>
+        <button type="button" id="tool-pencil" title="ดินสอ วาดอิสระ" value="pencil">✎</button>
+        <button type="button" id="tool-crop" title="Crop ภาพหลัก" value="crop">✂</button>
+      </div>
+      <div id="crop-actions" class="bar-row" style="display:none;">
+        <button type="button" id="crop-apply">Crop</button>
+        <button type="button" id="crop-cancel">ยกเลิก</button>
+      </div>
+      <div id="resize-actions" class="bar-row" style="display:none;">
+        <span class="label">ย่อขยายภาพหลัก</span>
+        <input type="number" id="resize-percent" min="10" max="400" value="100" style="width:56px;"> %
+        <button type="button" id="resize-apply">ใช้</button>
+      </div>
+      <button type="button" id="btn-resize-main" title="ย่อขยายภาพหลัก">Resize ภาพ</button>
+      <button type="button" id="btn-canvas-border" title="ปรับขนาดพื้นที่รูป (กว้าง × สูง)">ขอบพื้นที่รูป</button>
+      <button type="button" id="btn-clear-all" title="ลบทุก item (ลูกศร กล่อง ข้อความ ป้ายเลข ฯลฯ)">Clear all item</button>
+      <span class="label">สีเส้น</span>
+      <div class="swatch-group" id="swatch-stroke" aria-label="แม่สีเส้น"></div>
+      <span class="label">พื้นหลัง</span>
+      <div class="swatch-group" id="swatch-bg" aria-label="แม่สีพื้นหลัง"></div>
+      <div class="color-group">
+        <label for="color">สี</label>
+        <input id="color" type="color" value="#ef4444" title="เลือกสี">
+      </div>
+    </div>
+    <div class="bar-row">
+      <span class="label">ขนาดเส้น</span>
+      <select id="line-size" title="ขนาดเส้น">
+        <option value="1">1 px</option>
+        <option value="2">2 px</option>
+        <option value="3">3 px</option>
+        <option value="4">4 px</option>
+        <option value="5">5 px</option>
+        <option value="8" selected>8 px</option>
+        <option value="12">12 px</option>
+      </select>
+      <span class="label">ชนิดเส้น</span>
+      <div class="line-type-group" id="line-type-group" role="group" title="ชนิดเส้น">
+        <button type="button" class="line-type-btn active" value="solid" title="ทึบ"><span class="line-icon"></span></button>
+        <button type="button" class="line-type-btn" value="dashed" title="ประ"><span class="line-icon line-icon-dashed"></span></button>
+        <button type="button" class="line-type-btn" value="dotted" title="จุด"><span class="line-icon line-icon-dotted"></span></button>
+      </div>
+      <span class="label">ขนาด Font</span>
+      <input id="font-size" type="number" min="10" max="120" value="24" title="ขนาดตัวอักษร">
+      <button id="undo">Undo</button>
+      <button id="save">Save</button>
+    </div>
+    <span class="hint">วาด: ลาก | Text: คลิกวาง | Crop: เลือกเครื่องมือ ✂ ลากเลือกพื้นที่ แล้วกด Crop | Resize ภาพ: กดปุ่มแล้วใส่ % | รูป item: เลือกรูปแล้วปรับกว้าง×สูงใน dialog หรือลากมุม</span>
+  </div>
+
+  <div id="edit-dialog">
+    <div class="edit-dialog-header" id="edit-dialog-header">
+      <span class="edit-dialog-title">แก้ไขวัตถุที่เลือก</span>
+      <button type="button" class="edit-dialog-close" id="edit-dialog-close" title="ปิด">✕</button>
+    </div>
+    <div class="edit-dialog-body">
+      <div id="edit-shape-controls">
+      <span class="label">สีเส้น</span>
+      <input type="color" id="edit-color" class="color-mini" title="สีเส้น">
+      <span class="label">ขนาดเส้น</span>
+      <select id="edit-line-size">
+        <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        <option value="4">4</option><option value="5">5</option><option value="8">8</option><option value="12">12</option>
+      </select>
+      <span class="label">ชนิดเส้น</span>
+      <div class="line-type-group edit-line-type-group" id="edit-line-type-group">
+        <button type="button" class="line-type-btn" value="solid" title="ทึบ"><span class="line-icon"></span></button>
+        <button type="button" class="line-type-btn" value="dashed" title="ประ"><span class="line-icon line-icon-dashed"></span></button>
+        <button type="button" class="line-type-btn" value="dotted" title="จุด"><span class="line-icon line-icon-dotted"></span></button>
+      </div>
+      <span class="label" id="edit-bg-label" style="display:none;">พื้นหลัง</span>
+      <input type="color" id="edit-color-bg" class="color-mini" title="สีพื้นหลัง" style="display:none;">
+      <div class="edit-text-group" id="edit-text-font-group" style="display:none;">
+        <span class="label">Font</span>
+        <span class="label" id="edit-font-label">ขนาด</span>
+        <input type="number" id="edit-font-size" min="10" max="120" value="24">
+        <span class="label" id="edit-text-label">ข้อความ</span>
+        <input type="text" id="edit-text-content" placeholder="แก้ข้อความ...">
+      </div>
+      <div class="edit-text-group" id="edit-text-border-group" style="display:none;">
+        <span class="label">ขอบ</span>
+        <span id="edit-border-style-wrap">
+          <label><input type="radio" name="edit-text-border" value="none"> ไม่มี</label>
+          <label><input type="radio" name="edit-text-border" value="sharp"> เหลี่ยม</label>
+          <label><input type="radio" name="edit-text-border" value="rounded"> โค้ง</label>
+        </span>
+        <span class="label" id="edit-text-bg-label" style="display:none;">พื้นหลัง</span>
+        <input type="color" id="edit-text-bg" class="color-mini" title="สีพื้นหลังข้อความ" style="display:none;">
+      </div>
+      <div class="edit-text-group" id="edit-label-group" style="display:none;">
+        <span class="label">เลขลำดับ</span>
+        <input type="number" id="edit-label-number" min="1" max="9999" value="1" style="width:64px;">
+        <span class="label">สีป้าย</span>
+        <input type="color" id="edit-label-bg" class="color-mini" title="สีป้าย" value="#ffffff">
+        <span class="label">สีตัวเลข</span>
+        <input type="color" id="edit-label-color" class="color-mini" title="สีตัวเลข">
+      </div>
+      </div>
+      <div id="edit-image-controls" style="display:none;">
+        <span class="label">รูป</span>
+        <span class="label">กว้าง</span>
+        <input type="number" id="edit-image-w" min="1" max="2000" value="100" style="width:56px;">
+        <span class="label">สูง</span>
+        <input type="number" id="edit-image-h" min="1" max="2000" value="100" style="width:56px;">
+      </div>
+      <button type="button" id="edit-copy" title="คัดลอก (หรือ Ctrl+C)">คัดลอก</button>
+      <button type="button" id="edit-delete">ลบ</button>
+    </div>
+  </div>
+
+  <div id="canvas-size-dialog">
+    <div class="dialog-title">ปรับ +px เพิ่ม (อัปเดตแบบ realtime)</div>
+    <div class="canvas-pad-diagram">
+      <pre>     _____TOP_____
+     |             |
+Left |   content   | Right
+     |             |
+     |___BOTTOM____|</pre>
+    </div>
+    <div class="dialog-row"><span class="label">Top (px)</span><input type="number" id="canvas-pad-top" value="0" min="-2000" max="2000"></div>
+    <div class="dialog-row"><span class="label">Left (px)</span><input type="number" id="canvas-pad-left" value="0" min="-2000" max="2000"></div>
+    <div class="dialog-row"><span class="label">Right (px)</span><input type="number" id="canvas-pad-right" value="0" min="-2000" max="2000"></div>
+    <div class="dialog-row"><span class="label">Bottom (px)</span><input type="number" id="canvas-pad-bottom" value="0" min="-2000" max="2000"></div>
+    <div class="dialog-row"><span class="label">ขนาดผลลัพธ์</span><span id="canvas-size-result">— × —</span></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn-cancel" id="canvas-size-cancel">ยกเลิก (คืนค่า)</button>
+      <button type="button" class="btn-ok" id="canvas-size-ok">ปิด</button>
+    </div>
+  </div>
+
+  <div id="text-dialog">
+    <div class="text-dialog-title">ใส่ข้อความ</div>
+    <textarea id="text-dialog-input" placeholder="พิมพ์ข้อความ..."></textarea>
+    <div class="text-dialog-border">
+      <span class="label">ขอบ</span>
+      <label><input type="radio" name="text-border" value="none" checked> ไม่มีขอบ</label>
+      <label><input type="radio" name="text-border" value="sharp"> ขอบเหลี่ยม</label>
+      <label><input type="radio" name="text-border" value="rounded"> ขอบโค้ง</label>
+    </div>
+    <div class="text-dialog-border" id="text-dialog-bg-wrap" style="display:none;">
+      <span class="label">สีพื้นหลัง</span>
+      <input type="color" id="text-dialog-bg" value="#1a1a1e" title="สีพื้นหลัง">
+    </div>
+    <div class="text-dialog-actions">
+      <button type="button" class="btn-cancel" id="text-dialog-cancel">ยกเลิก</button>
+      <button type="button" class="btn-ok" id="text-dialog-ok">ตกลง</button>
+    </div>
+  </div>
+
+  <div id="wrap">
+    <div id="canvas-zoom-wrap">
+      <canvas id="cv"></canvas>
+      <canvas id="canvas-border-overlay"></canvas>
+    </div>
+  </div>
+
+<script>
+const canvas = document.getElementById('cv');
+const ctx = canvas.getContext('2d');
+const canvasBorderOverlay = document.getElementById('canvas-border-overlay');
+let lastCanvasResizePos = null;
+let dialogBaseState = null; // { w, h, baseImage, shapes } เมื่อเปิด dialog ปรับ +px
+
+let img = null;
+let tool = 'arrow';
+let color = '#ef4444';
+let colorBg = '#ef4444'; // สีพื้นหลัง (highlight)
+let lineSizePx = 8;
+let lineType = 'solid'; // solid | dashed | dotted
+let fontSizePx = 24;
+
+const PRESET_COLORS = [
+  { name: 'ขาว', hex: '#ffffff' },
+  { name: 'ดำ', hex: '#000000' },
+  { name: 'เทามืด', hex: '#374151' },
+  { name: 'เทา', hex: '#9ca3af' },
+  { name: 'แดง', hex: '#ef4444' },
+  { name: 'ฟ้า', hex: '#3b82f6' },
+  { name: 'เขียว', hex: '#22c55e' },
+  { name: 'เหลือง', hex: '#eab308' },
+  { name: 'ส้ม', hex: '#f97316' },
+  { name: 'ม่วง', hex: '#a855f7' }
+];
+
+// รายการวัตถุที่วาด (รองรับย้าย/ปรับขนาด)
+let shapes = [];
+let selectedIndex = -1;
+let dragMode = null; // 'draw' | 'move' | 'resize'
+let start = null;
+let current = null;
+let resizeHandle = null; // 0..7 สำหรับ box/highlight, 0|1 สำหรับ arrow
+let pendingTextPos = null; // ตำแหน่งที่คลิกเมื่อรอใส่ข้อความจาก dialog
+let zoom = 1;
+let copiedShape = null; // สำหรับ Ctrl+C / Ctrl+V
+let undoStack = []; // { type: 'shape' } หรือ { type: 'crop', before, after }
+let redoStack = []; // { type: 'shape', shape } หรือ { type: 'crop', before, after }
+let cropPreview = null; // { x, y, w, h } เมื่อเลือก Crop แล้วลาก
+let cropResizeHandle = null; // 0..7 เมื่อกำลังลากปรับขนาดขอบ crop
+let pencilCurrentPath = []; // จุดที่วาดด้วยดินสอระหว่างลาก (ยังไม่บันทึก)
+let canvasBorderMode = false; // แสดงขอบพื้นที่รูป + มือจับขยาย
+let canvasBorderResizeHandle = null; // 0..7 เมื่อกำลังลากขยายพื้นที่
+let canvasResizePreview = null; // { newW, newH, ox, oy } ระหว่างลาก
+const CANVAS_EXPAND_BG = '#1a1a1e'; // สีพื้นเมื่อขยายพื้นที่
+const HANDLE_R = 12;
+const LABEL_MIN_R = 40;
+const LABEL_DEFAULT_R = 40;
+const CANVAS_BORDER_HANDLE_R = 14; // มือจับขอบพื้นที่รูป
+const CANVAS_BORDER_HANDLE_INSET = 16; // ระยะมือจับเลยขอบออกมา (px)
+const TEXT_PADDING = 6;
+const PASTE_OFFSET = 20;
+const imageCache = {}; // src -> HTMLImageElement สำหรับรูปที่ลากวาง
+
+function hexToRgba(hex, a) {
+  const h = (hex || '#ef4444').replace('#','');
+  const r = parseInt(h.slice(0,2),16);
+  const g = parseInt(h.slice(2,4),16);
+  const b = parseInt(h.slice(4,6),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function getPos(e) {
+  return getPosFromClient(e.clientX, e.clientY);
+}
+function getPosFromClient(clientX, clientY) {
+  const r = canvas.getBoundingClientRect();
+  const x = (clientX - r.left) * (canvas.width / r.width);
+  const y = (clientY - r.top) * (canvas.height / r.height);
+  return { x, y };
+}
+
+function lineWidth() { return lineSizePx; }
+function headLen() { return Math.max(14, canvas.width * 0.02); }
+function fontSize() { return fontSizePx; }
+
+/** ถ้าเคยแก้เลขป้าย (nextLabelNumberSeq) จะนับจากนั้น 2,3,4... ไม่ก็ใช้ max+1 */
+var nextLabelNumberSeq = null;
+
+function getNextLabelNumberPeek() {
+  if (nextLabelNumberSeq != null) return nextLabelNumberSeq;
+  var max = 0;
+  shapes.forEach(function (s) {
+    if (s.type === 'label' && typeof s.number === 'number' && s.number > max) max = s.number;
+  });
+  return max + 1;
+}
+
+function getNextLabelNumber() {
+  if (nextLabelNumberSeq != null) {
+    var v = nextLabelNumberSeq;
+    nextLabelNumberSeq++;
+    return v;
+  }
+  var max = 0;
+  shapes.forEach(function (s) {
+    if (s.type === 'label' && typeof s.number === 'number' && s.number > max) max = s.number;
+  });
+  return max + 1;
+}
+
+// --- วาด shape เดียว (จาก object)
+function drawShape(s, opts) {
+  if (opts == null) opts = {};
+  const c = s.color || '#ef4444';
+  const cBg = s.colorBg != null ? s.colorBg : c;
+  const lw = s.lineWidth != null ? s.lineWidth : lineSizePx;
+  const dash = opts.preview ? [8,6] : (s.lineType === 'dashed' ? [12,6] : s.lineType === 'dotted' ? [3,4] : []);
+  ctx.save();
+  if (s.type === 'arrow') {
+    const from = s.from, to = s.to;
+    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+    ctx.strokeStyle = c; ctx.fillStyle = c;
+    ctx.lineWidth = Math.max(2, lw);
+    ctx.setLineDash(dash);
+    ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(to.x, to.y);
+    ctx.lineTo(to.x - headLen()*Math.cos(angle-Math.PI/6), to.y - headLen()*Math.sin(angle-Math.PI/6));
+    ctx.lineTo(to.x - headLen()*Math.cos(angle+Math.PI/6), to.y - headLen()*Math.sin(angle+Math.PI/6));
+    ctx.closePath(); ctx.fill();
+  } else if (s.type === 'line') {
+    const from = s.from, to = s.to;
+    ctx.strokeStyle = c;
+    ctx.lineWidth = Math.max(2, lw);
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.stroke();
+  } else if (s.type === 'box') {
+    ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.setLineDash(dash);
+    ctx.strokeRect(s.x, s.y, s.w, s.h);
+  } else if (s.type === 'highlight') {
+    ctx.fillStyle = hexToRgba(cBg, 0.25); ctx.strokeStyle = hexToRgba(c, 0.9);
+    ctx.lineWidth = lw; ctx.setLineDash(dash);
+    ctx.fillRect(s.x, s.y, s.w, s.h); ctx.strokeRect(s.x, s.y, s.w, s.h);
+  } else if (s.type === 'text') {
+    const fs = s.fontSize != null ? s.fontSize : fontSizePx;
+    const borderStyle = s.borderStyle || 'none';
+    ctx.font = `${fs}px ui-sans-serif`;
+    const m = ctx.measureText(s.text || '');
+    const tw = m.width;
+    const th = fs * 1.2;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (borderStyle === 'none') {
+      ctx.fillStyle = c;
+      ctx.strokeStyle = 'rgba(0,0,0,.55)';
+      ctx.lineWidth = Math.max(2, Math.floor(fs / 8));
+      ctx.strokeText(s.text, s.x, s.y);
+      ctx.fillText(s.text, s.x, s.y);
+    } else {
+      const bw = tw + TEXT_PADDING * 2;
+      const bh = th + TEXT_PADDING * 2;
+      const bx = s.x - bw / 2;
+      const by = s.y - bh / 2;
+      const bgColor = s.colorBg != null ? s.colorBg : '#1a1a1e';
+      ctx.fillStyle = hexToRgba(bgColor, 0.95);
+      ctx.strokeStyle = c;
+      ctx.lineWidth = Math.max(2, Math.floor(fs / 8));
+      if (borderStyle === 'rounded' && ctx.roundRect) {
+        const r = Math.min(8, bw / 4, bh / 4);
+        ctx.beginPath();
+        ctx.roundRect(bx, by, bw, bh, r);
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        ctx.fillRect(bx, by, bw, bh);
+        ctx.strokeRect(bx, by, bw, bh);
+      }
+      ctx.fillStyle = c;
+      ctx.strokeStyle = 'rgba(0,0,0,.55)';
+      ctx.strokeText(s.text, s.x, s.y);
+      ctx.fillText(s.text, s.x, s.y);
+    }
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  } else if (s.type === 'image' && s.src) {
+    if (!imageCache[s.src]) {
+      const im = new Image();
+      im.onload = () => { if (img) fullRedraw(); };
+      im.src = s.src;
+      imageCache[s.src] = im;
+    }
+    const el = imageCache[s.src];
+    if (el && el.complete && el.naturalWidth) {
+      ctx.drawImage(el, s.x, s.y, s.w, s.h);
+    } else {
+      ctx.fillStyle = '#2a3040';
+      ctx.fillRect(s.x, s.y, s.w, s.h);
+      ctx.strokeStyle = '#52525b';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(s.x, s.y, s.w, s.h);
+      ctx.fillStyle = '#71717a';
+      ctx.font = '14px ui-sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('รูป…', s.x + s.w / 2, s.y + s.h / 2);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    }
+  } else if (s.type === 'pencil' && s.points && s.points.length >= 2) {
+    const lw = s.lineWidth != null ? s.lineWidth : lineSizePx;
+    ctx.strokeStyle = s.color || c;
+    ctx.lineWidth = Math.max(2, lw);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(s.points[0].x, s.points[0].y);
+    for (let i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i].x, s.points[i].y);
+    ctx.stroke();
+  } else if (s.type === 'label') {
+    const r = Math.max(LABEL_MIN_R, (s.r != null ? s.r : LABEL_DEFAULT_R));
+    const num = (s.number != null ? s.number : 1);
+    const fillColor = s.colorBg != null ? s.colorBg : '#ffffff';
+    const strokeColor = s.color || '#fff';
+    const textColor = s.color != null ? s.color : '#fff';
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = Math.max(2, Math.floor(r / 8));
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold ' + Math.max(12, Math.floor(r * 0.9)) + 'px ui-sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(num), s.x, s.y);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+  ctx.restore();
+}
+
+// --- Hit test
+function hitArrow(p, from, to) {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const u = ((p.x - from.x)*dx + (p.y - from.y)*dy) / (len*len);
+  if (u < 0 || u > 1) return false;
+  const proj = { x: from.x + u*dx, y: from.y + u*dy };
+  return Math.hypot(p.x - proj.x, p.y - proj.y) <= lineWidth() + 8;
+}
+function hitRect(p, x, y, w, h) {
+  return p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h;
+}
+function hitText(p, s) {
+  const fs = s.fontSize != null ? s.fontSize : fontSize();
+  ctx.save();
+  ctx.font = `${fs}px ui-sans-serif`;
+  const m = ctx.measureText(s.text || '');
+  ctx.restore();
+  const th = fs * 1.2;
+  const bw = m.width + TEXT_PADDING * 2;
+  const bh = th + TEXT_PADDING * 2;
+  const bx = s.x - bw / 2;
+  const by = s.y - bh / 2;
+  return p.x >= bx && p.x <= bx + bw && p.y >= by && p.y <= by + bh;
+}
+function hitPencil(p, s) {
+  const pts = s.points;
+  if (!pts || pts.length < 2) return false;
+  const lw = (s.lineWidth != null ? s.lineWidth : lineSizePx) + 6;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const u = ((p.x - a.x) * dx + (p.y - a.y) * dy) / (len * len);
+    if (u < 0 || u > 1) continue;
+    const proj = { x: a.x + u * dx, y: a.y + u * dy };
+    if (Math.hypot(p.x - proj.x, p.y - proj.y) <= lw) return true;
+  }
+  return false;
+}
+
+function getShapeAt(p) {
+  for (let i = shapes.length - 1; i >= 0; i--) {
+    const s = shapes[i];
+    if ((s.type === 'arrow' || s.type === 'line') && hitArrow(p, s.from, s.to)) return i;
+    if (s.type === 'box' && hitRect(p, s.x, s.y, s.w, s.h)) return i;
+    if (s.type === 'highlight' && hitRect(p, s.x, s.y, s.w, s.h)) return i;
+    if (s.type === 'text' && hitText(p, s)) return i;
+    if (s.type === 'image' && hitRect(p, s.x, s.y, s.w, s.h)) return i;
+    if (s.type === 'pencil' && hitPencil(p, s)) return i;
+    if (s.type === 'label') {
+      const r = Math.max(LABEL_MIN_R, (s.r != null ? s.r : LABEL_DEFAULT_R));
+      if (Math.hypot(p.x - s.x, p.y - s.y) <= r) return i;
+    }
+  }
+  return -1;
+}
+
+// Handles: box/highlight = 0..7 (TL,T,TR,R,BR,B,BL,L), arrow = 0 from, 1 to
+function getHandleAt(p) {
+  if (selectedIndex < 0) return null;
+  const s = shapes[selectedIndex];
+  const r = HANDLE_R;
+  if (s.type === 'arrow' || s.type === 'line') {
+    if (Math.hypot(p.x - s.from.x, p.y - s.from.y) <= r) return 0;
+    if (Math.hypot(p.x - s.to.x, p.y - s.to.y) <= r) return 1;
+    return null;
+  }
+  if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+    const {x, y, w, h} = s;
+    const cx = x + w/2, cy = y + h/2;
+    const handles = [
+      {x: x, y: y}, {x: cx, y: y}, {x: x+w, y: y}, {x: x+w, y: cy},
+      {x: x+w, y: y+h}, {x: cx, y: y+h}, {x: x, y: y+h}, {x: x, y: cy}
+    ];
+    for (let i = 0; i < handles.length; i++)
+      if (Math.hypot(p.x - handles[i].x, p.y - handles[i].y) <= r) return i;
+  }
+  if (s.type === 'label') {
+    const rad = Math.max(LABEL_MIN_R, (s.r != null ? s.r : LABEL_DEFAULT_R));
+    const handles = [
+      { x: s.x, y: s.y - rad },
+      { x: s.x + rad, y: s.y },
+      { x: s.x, y: s.y + rad },
+      { x: s.x - rad, y: s.y }
+    ];
+    for (let i = 0; i < handles.length; i++)
+      if (Math.hypot(p.x - handles[i].x, p.y - handles[i].y) <= r) return i;
+  }
+  return null;
+}
+
+function drawHandles() {
+  if (selectedIndex < 0) return;
+  const s = shapes[selectedIndex];
+  ctx.save();
+  ctx.fillStyle = '#3b82f6';
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  const r = HANDLE_R;
+  if (s.type === 'arrow' || s.type === 'line') {
+    ctx.beginPath(); ctx.arc(s.from.x, s.from.y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(s.to.x, s.to.y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+    const {x, y, w, h} = s;
+    const cx = x + w/2, cy = y + h/2;
+    [[x,y],[cx,y],[x+w,y],[x+w,cy],[x+w,y+h],[cx,y+h],[x,y+h],[x,cy]].forEach(([hx,hy]) => {
+      ctx.beginPath(); ctx.arc(hx, hy, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    });
+  } else if (s.type === 'label') {
+    const rad = Math.max(LABEL_MIN_R, (s.r != null ? s.r : LABEL_DEFAULT_R));
+    [[s.x, s.y - rad], [s.x + rad, s.y], [s.x, s.y + rad], [s.x - rad, s.y]].forEach(([hx, hy]) => {
+      ctx.beginPath(); ctx.arc(hx, hy, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    });
+  } else if (s.type === 'text') {
+    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  } else if (s.type === 'pencil' && s.points && s.points.length >= 2) {
+    var minX = s.points[0].x, minY = s.points[0].y, maxX = minX, maxY = minY;
+    s.points.forEach(function (pt) {
+      if (pt.x < minX) minX = pt.x;
+      if (pt.y < minY) minY = pt.y;
+      if (pt.x > maxX) maxX = pt.x;
+      if (pt.y > maxY) maxY = pt.y;
+    });
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(minX - 4, minY - 4, maxX - minX + 8, maxY - minY + 8);
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
+function fullRedraw(previewShape) {
+  if (!img) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0);
+  shapes.forEach(s => drawShape(s));
+  if (previewShape) drawShape(previewShape, { preview: true });
+  if (tool === 'pencil' && pencilCurrentPath.length >= 2) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(2, lineSizePx);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(pencilCurrentPath[0].x, pencilCurrentPath[0].y);
+    for (var i = 1; i < pencilCurrentPath.length; i++) ctx.lineTo(pencilCurrentPath[i].x, pencilCurrentPath[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+  drawHandles();
+  var rect = cropPreview || (tool === 'crop' && start && current ? getCropRect() : null);
+  if (rect && rect.w > 0 && rect.h > 0) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, canvas.width, rect.y);
+    ctx.fillRect(0, rect.y, rect.x, rect.h);
+    ctx.fillRect(rect.x + rect.w, rect.y, canvas.width - (rect.x + rect.w), rect.h);
+    ctx.fillRect(0, rect.y + rect.h, canvas.width, canvas.height - (rect.y + rect.h));
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+    ctx.restore();
+    if (cropPreview && cropPreview.w > 0 && cropPreview.h > 0) {
+      ctx.save();
+      ctx.fillStyle = '#3b82f6';
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      var r = HANDLE_R;
+      var x = cropPreview.x, y = cropPreview.y, w = cropPreview.w, h = cropPreview.h;
+      var cx = x + w / 2, cy = y + h / 2;
+      [[x,y],[cx,y],[x+w,y],[x+w,cy],[x+w,y+h],[cx,y+h],[x,y+h],[x,cy]].forEach(function ([hx, hy]) {
+        ctx.beginPath();
+        ctx.arc(hx, hy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+  }
+  if (canvasBorderOverlay) {
+    canvasBorderOverlay.classList.remove('visible');
+    canvasBorderOverlay.width = 0;
+    canvasBorderOverlay.height = 0;
+  }
+}
+
+function getCanvasBorderHandleAt(p) {
+  if (!canvasBorderMode || !img) return null;
+  var w = canvas.width, h = canvas.height;
+  var cx = w / 2, cy = h / 2;
+  var handles = [[0,0],[cx,0],[w,0],[w,cy],[w,h],[cx,h],[0,h],[0,cy]];
+  var r = CANVAS_BORDER_HANDLE_R;
+  for (var i = 0; i < handles.length; i++) {
+    if (Math.hypot(p.x - handles[i][0], p.y - handles[i][1]) <= r) return i;
+  }
+  return null;
+}
+
+function getPosFromOverlay(clientX, clientY) {
+  if (!canvasBorderOverlay || !canvas) return null;
+  var r = canvasBorderOverlay.getBoundingClientRect();
+  var M = CANVAS_BORDER_HANDLE_INSET;
+  var ox = (clientX - r.left) * (canvasBorderOverlay.width / r.width);
+  var oy = (clientY - r.top) * (canvasBorderOverlay.height / r.height);
+  return { x: ox - M, y: oy - M };
+}
+
+function getCanvasPosFromClient(clientX, clientY) {
+  var r = canvas.getBoundingClientRect();
+  var scaleX = canvas.width / r.width;
+  var scaleY = canvas.height / r.height;
+  return {
+    x: (clientX - r.left) * scaleX,
+    y: (clientY - r.top) * scaleY
+  };
+}
+
+function applyCanvasResize(newW, newH, ox, oy) {
+  if (!img || newW <= 0 || newH <= 0) return;
+  var off = document.createElement('canvas');
+  off.width = newW;
+  off.height = newH;
+  var octx = off.getContext('2d');
+  octx.fillStyle = CANVAS_EXPAND_BG;
+  octx.fillRect(0, 0, newW, newH);
+  octx.drawImage(canvas, 0, 0, canvas.width, canvas.height, ox, oy, canvas.width, canvas.height);
+  var dataUrl = off.toDataURL('image/png');
+  var im = new Image();
+  im.onload = function () {
+    canvas.width = newW;
+    canvas.height = newH;
+    img = im;
+    if (ox !== 0 || oy !== 0) {
+      shapes.forEach(function (s) {
+        if (s.type === 'arrow' || s.type === 'line') {
+          s.from.x += ox; s.from.y += oy; s.to.x += ox; s.to.y += oy;
+        } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+          s.x += ox; s.y += oy;
+        } else if (s.type === 'text' || s.type === 'label') {
+          s.x += ox; s.y += oy;
+        } else if (s.type === 'pencil' && s.points) {
+          s.points.forEach(function (pt) { pt.x += ox; pt.y += oy; });
+        }
+      });
+    }
+    canvasBorderResizeHandle = null;
+    canvasResizePreview = null;
+    selectedIndex = -1;
+    syncEditPanelFromSelection();
+    fullRedraw();
+  };
+  im.src = dataUrl;
+}
+
+function applyCanvasResizeBySize(newW, newH) {
+  if (!img || newW <= 0 || newH <= 0) return;
+  newW = Math.max(1, Math.round(newW));
+  newH = Math.max(1, Math.round(newH));
+  var W = canvas.width, H = canvas.height;
+  if (newW === W && newH === H) return;
+  var off = document.createElement('canvas');
+  off.width = newW;
+  off.height = newH;
+  var octx = off.getContext('2d');
+  octx.fillStyle = CANVAS_EXPAND_BG;
+  octx.fillRect(0, 0, newW, newH);
+  if (newW >= W && newH >= H) {
+    octx.drawImage(canvas, 0, 0, W, H, 0, 0, W, H);
+  } else {
+    octx.drawImage(canvas, 0, 0, Math.min(newW, W), Math.min(newH, H), 0, 0, Math.min(newW, W), Math.min(newH, H));
+    var i = shapes.length - 1;
+    while (i >= 0) {
+      var s = shapes[i];
+      var out = false;
+      if (s.type === 'arrow' || s.type === 'line') {
+        if (s.from.x < 0 && s.to.x < 0 || s.from.x > newW && s.to.x > newW || s.from.y < 0 && s.to.y < 0 || s.from.y > newH && s.to.y > newH) out = true;
+      } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+        if (s.x + s.w < 0 || s.x > newW || s.y + s.h < 0 || s.y > newH) out = true;
+      } else if (s.type === 'text' || s.type === 'pencil') {
+        var sx = s.type === 'text' ? s.x : (s.points && s.points[0] ? s.points[0].x : 0);
+        var sy = s.type === 'text' ? s.y : (s.points && s.points[0] ? s.points[0].y : 0);
+        if (s.type === 'pencil' && s.points) {
+          out = s.points.every(function (pt) { return pt.x < 0 || pt.x > newW || pt.y < 0 || pt.y > newH; });
+        } else if (sx > newW || sy > newH || (s.type === 'text' && (sx < -500 || sy < -500))) out = true;
+      } else if (s.type === 'label') {
+        var lr = Math.max(LABEL_MIN_R, (s.r != null ? s.r : LABEL_DEFAULT_R));
+        if (s.x + lr < 0 || s.x - lr > newW || s.y + lr < 0 || s.y - lr > newH) out = true;
+      }
+      if (out) shapes.splice(i, 1);
+      i--;
+    }
+  }
+  var dataUrl = off.toDataURL('image/png');
+  var im = new Image();
+  im.onload = function () {
+    canvas.width = newW;
+    canvas.height = newH;
+    img = im;
+    selectedIndex = -1;
+    syncEditPanelFromSelection();
+    fullRedraw();
+  };
+  im.src = dataUrl;
+}
+
+function getCanvasResizeParams(handleIndex, p) {
+  var W = canvas.width, H = canvas.height;
+  var ox = 0, oy = 0, newW = W, newH = H;
+  switch (handleIndex) {
+    case 0: ox = p.x < 0 ? -p.x : 0; oy = p.y < 0 ? -p.y : 0; newW = W + ox; newH = H + oy; break;
+    case 1: oy = p.y < 0 ? -p.y : 0; newH = H + oy; break;
+    case 2: oy = p.y < 0 ? -p.y : 0; newW = p.x > W ? Math.max(W + 1, p.x) : W; newH = H + oy; break;
+    case 3: newW = p.x > W ? Math.max(W + 1, p.x) : W; break;
+    case 4: newW = p.x > W ? Math.max(W + 1, p.x) : W; newH = p.y > H ? Math.max(H + 1, p.y) : H; break;
+    case 5: newH = p.y > H ? Math.max(H + 1, p.y) : H; break;
+    case 6: ox = p.x < 0 ? -p.x : 0; newW = W + ox; newH = p.y > H ? Math.max(H + 1, p.y) : H; break;
+    case 7: ox = p.x < 0 ? -p.x : 0; newW = W + ox; break;
+  }
+  newW = Math.max(1, Math.round(newW));
+  newH = Math.max(1, Math.round(newH));
+  return { newW: newW, newH: newH, ox: ox, oy: oy };
+}
+
+function getCropHandleAt(p) {
+  if (!cropPreview || cropPreview.w <= 0 || cropPreview.h <= 0) return null;
+  var x = cropPreview.x, y = cropPreview.y, w = cropPreview.w, h = cropPreview.h;
+  var cx = x + w / 2, cy = y + h / 2;
+  var handles = [[x,y],[cx,y],[x+w,y],[x+w,cy],[x+w,y+h],[cx,y+h],[x,y+h],[x,cy]];
+  var r = HANDLE_R;
+  for (var i = 0; i < handles.length; i++) {
+    if (Math.hypot(p.x - handles[i][0], p.y - handles[i][1]) <= r) return i;
+  }
+  return null;
+}
+
+function getCropRect() {
+  if (!start || !current) return null;
+  var x = Math.min(start.x, current.x), y = Math.min(start.y, current.y);
+  var w = Math.abs(current.x - start.x), h = Math.abs(current.y - start.y);
+  return { x: x, y: y, w: w, h: h };
+}
+
+function applyCrop() {
+  if (!cropPreview || cropPreview.w <= 0 || cropPreview.h <= 0 || !img) return;
+  var r = cropPreview;
+  var savedCropPreview = cropPreview;
+  cropPreview = null;
+  fullRedraw();
+  var beforeState = {
+    w: canvas.width,
+    h: canvas.height,
+    imageDataUrl: canvas.toDataURL('image/png'),
+    shapes: JSON.parse(JSON.stringify(shapes))
+  };
+  cropPreview = savedCropPreview;
+  fullRedraw();
+  var off = document.createElement('canvas');
+  off.width = r.w;
+  off.height = r.h;
+  var octx = off.getContext('2d');
+  octx.drawImage(img, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
+  var dataUrl = off.toDataURL('image/png');
+  var im = new Image();
+  im.onload = function () {
+    var newW = im.naturalWidth, newH = im.naturalHeight;
+    canvas.width = newW;
+    canvas.height = newH;
+    img = im;
+    var dx = -r.x, dy = -r.y;
+    for (var i = shapes.length - 1; i >= 0; i--) {
+      var s = shapes[i];
+      if (s.type === 'arrow' || s.type === 'line') {
+        s.from.x += dx; s.from.y += dy; s.to.x += dx; s.to.y += dy;
+        if (s.from.x < 0 && s.to.x < 0 || s.from.x > newW && s.to.x > newW || s.from.y < 0 && s.to.y < 0 || s.from.y > newH && s.to.y > newH) shapes.splice(i, 1);
+      } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+        s.x += dx; s.y += dy;
+        if (s.x + s.w < 0 || s.x > newW || s.y + s.h < 0 || s.y > newH) shapes.splice(i, 1);
+      } else if (s.type === 'text') {
+        s.x += dx; s.y += dy;
+        if (s.x < -500 || s.x > newW + 500 || s.y < -500 || s.y > newH + 500) shapes.splice(i, 1);
+      }
+    }
+    var afterState = {
+      w: canvas.width,
+      h: canvas.height,
+      imageDataUrl: canvas.toDataURL('image/png'),
+      shapes: JSON.parse(JSON.stringify(shapes))
+    };
+    undoStack.push({ type: 'crop', before: beforeState, after: afterState });
+    redoStack = [];
+    cropPreview = null;
+    selectedIndex = -1;
+    document.getElementById('crop-actions').style.display = 'none';
+    tool = 'arrow';
+    document.querySelectorAll('#tool-group button').forEach(function (b) { b.classList.remove('active'); if (b.value === 'arrow') b.classList.add('active'); });
+    syncEditPanelFromSelection();
+    fullRedraw();
+  };
+  im.src = dataUrl;
+}
+
+function fitCanvasToImage(image) {
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  img = image;
+  shapes = [];
+  selectedIndex = -1;
+  undoStack = [];
+  redoStack = [];
+  syncEditPanelFromSelection();
+  fullRedraw();
+}
+
+function clearRedo() {
+  redoStack = [];
+}
+
+function restoreState(state) {
+  if (!state || !state.imageDataUrl) return;
+  var im = new Image();
+  im.onload = function () {
+    canvas.width = state.w;
+    canvas.height = state.h;
+    img = im;
+    shapes = state.shapes ? JSON.parse(JSON.stringify(state.shapes)) : [];
+    selectedIndex = -1;
+    cropPreview = null;
+    cropResizeHandle = null;
+    document.getElementById('crop-actions').style.display = 'none';
+    syncEditPanelFromSelection();
+    fullRedraw();
+  };
+  im.src = state.imageDataUrl;
+}
+
+function undo() {
+  if (undoStack.length === 0) return;
+  var op = undoStack.pop();
+  if (op.type === 'crop') {
+    restoreState(op.before);
+    redoStack.push(op);
+    return;
+  }
+  if (op.type === 'shape') {
+    if (shapes.length === 0) { undoStack.push(op); return; }
+    var s = shapes.pop();
+    redoStack.push({ type: 'shape', shape: s });
+  }
+  selectedIndex = -1;
+  syncEditPanelFromSelection();
+  fullRedraw();
+}
+
+function redo() {
+  if (redoStack.length === 0) return;
+  var op = redoStack.pop();
+  if (op.type === 'crop') {
+    restoreState(op.after);
+    undoStack.push(op);
+    return;
+  }
+  if (op.shape) {
+    shapes.push(op.shape);
+    undoStack.push({ type: 'shape' });
+  }
+  selectedIndex = -1;
+  syncEditPanelFromSelection();
+  fullRedraw();
+}
+
+function cloneShape(s, offsetX, offsetY) {
+  const dx = offsetX || 0, dy = offsetY || 0;
+  if (s.type === 'arrow' || s.type === 'line') {
+    return {
+      type: s.type,
+      from: { x: s.from.x + dx, y: s.from.y + dy },
+      to: { x: s.to.x + dx, y: s.to.y + dy },
+      color: s.color,
+      lineWidth: s.lineWidth,
+      lineType: s.lineType
+    };
+  }
+  if (s.type === 'box' || s.type === 'highlight') {
+    return {
+      type: s.type,
+      x: s.x + dx, y: s.y + dy, w: s.w, h: s.h,
+      color: s.color,
+      colorBg: s.colorBg,
+      lineWidth: s.lineWidth,
+      lineType: s.lineType
+    };
+  }
+  if (s.type === 'text') {
+    return {
+      type: 'text',
+      x: s.x + dx, y: s.y + dy,
+      text: s.text,
+      color: s.color,
+      fontSize: s.fontSize,
+      borderStyle: s.borderStyle
+    };
+  }
+  if (s.type === 'image') {
+    return {
+      type: 'image',
+      x: s.x + dx, y: s.y + dy, w: s.w, h: s.h,
+      src: s.src
+    };
+  }
+  if (s.type === 'pencil' && s.points) {
+    return {
+      type: 'pencil',
+      points: s.points.map(function (pt) { return { x: pt.x + dx, y: pt.y + dy }; }),
+      color: s.color,
+      lineWidth: s.lineWidth
+    };
+  }
+  if (s.type === 'label') {
+    return {
+      type: 'label',
+      x: s.x + dx, y: s.y + dy,
+      r: s.r != null ? s.r : LABEL_DEFAULT_R,
+      number: (s.number != null ? s.number : 1),
+      color: s.color,
+      colorBg: s.colorBg != null ? s.colorBg : '#ffffff'
+    };
+  }
+  return null;
+}
+
+function syncEditPanelFromSelection() {
+  const panel = document.getElementById('edit-dialog');
+  const hasSel = selectedIndex >= 0 && shapes[selectedIndex];
+  if (!panel) return;
+  if (!hasSel) {
+    panel.classList.remove('visible');
+    return;
+  }
+  panel.classList.add('visible');
+  const s = shapes[selectedIndex];
+  const isImage = s.type === 'image';
+  document.getElementById('edit-shape-controls').style.display = isImage ? 'none' : '';
+  document.getElementById('edit-image-controls').style.display = isImage ? '' : 'none';
+  if (isImage) {
+    document.getElementById('edit-image-w').value = String(Math.round(s.w) || 100);
+    document.getElementById('edit-image-h').value = String(Math.round(s.h) || 100);
+  }
+  document.getElementById('edit-color').value = s.color || '#ef4444';
+  document.getElementById('edit-line-size').value = String(s.lineWidth != null ? s.lineWidth : lineSizePx);
+  const editLineTypeVal = s.lineType || 'solid';
+  document.querySelectorAll('#edit-line-type-group .line-type-btn').forEach(function (b) {
+    b.classList.toggle('active', b.value === editLineTypeVal);
+  });
+  const isHighlight = s.type === 'highlight';
+  const isText = s.type === 'text';
+  const isLabel = s.type === 'label';
+  document.getElementById('edit-bg-label').style.display = isHighlight ? '' : 'none';
+  document.getElementById('edit-color-bg').style.display = isHighlight ? '' : 'none';
+  if (isHighlight) document.getElementById('edit-color-bg').value = s.colorBg != null ? s.colorBg : s.color || '#ef4444';
+  document.getElementById('edit-label-group').style.display = isLabel ? '' : 'none';
+  if (isLabel) {
+    document.getElementById('edit-label-number').value = String(s.number != null ? s.number : 1);
+    document.getElementById('edit-label-bg').value = s.colorBg != null ? s.colorBg : '#ffffff';
+    document.getElementById('edit-label-color').value = s.color != null ? s.color : '#ffffff';
+  }
+  document.getElementById('edit-text-font-group').style.display = isText ? '' : 'none';
+  document.getElementById('edit-text-border-group').style.display = isText ? '' : 'none';
+  if (isText) {
+    document.getElementById('edit-font-size').value = String(s.fontSize != null ? s.fontSize : fontSizePx);
+    document.getElementById('edit-text-content').value = s.text || '';
+    const borderVal = s.borderStyle || 'none';
+    document.querySelectorAll('input[name="edit-text-border"]').forEach(function (r) {
+      r.checked = r.value === borderVal;
+    });
+    const showTextBg = s.borderStyle && s.borderStyle !== 'none';
+    document.getElementById('edit-text-bg-label').style.display = showTextBg ? '' : 'none';
+    document.getElementById('edit-text-bg').style.display = showTextBg ? '' : 'none';
+    if (showTextBg) document.getElementById('edit-text-bg').value = s.colorBg != null ? s.colorBg : '#1a1a1e';
+  }
+}
+
+function applyEditToSelected() {
+  if (selectedIndex < 0 || !shapes[selectedIndex]) return;
+  const s = shapes[selectedIndex];
+  if (s.type === 'image') {
+    const w = parseInt(document.getElementById('edit-image-w').value, 10);
+    const h = parseInt(document.getElementById('edit-image-h').value, 10);
+    if (w > 0 && h > 0) { s.w = w; s.h = h; }
+    fullRedraw();
+    return;
+  }
+  if (s.type === 'label') {
+    const num = parseInt(document.getElementById('edit-label-number').value, 10);
+    if (!isNaN(num) && num >= 1) {
+      s.number = num;
+      nextLabelNumberSeq = num + 1;
+    }
+    s.colorBg = document.getElementById('edit-label-bg').value;
+    s.color = document.getElementById('edit-label-color').value;
+    fullRedraw();
+    return;
+  }
+  s.color = document.getElementById('edit-color').value;
+  s.lineWidth = parseInt(document.getElementById('edit-line-size').value, 10) || 3;
+  s.lineType = document.querySelector('#edit-line-type-group .line-type-btn.active')?.value || 'solid';
+  if (s.type === 'highlight') s.colorBg = document.getElementById('edit-color-bg').value;
+  if (s.type === 'text') {
+    applyEditTextFontToSelected();
+    applyEditTextBorderToSelected();
+  }
+  fullRedraw();
+}
+
+function applyEditTextFontToSelected() {
+  if (selectedIndex < 0 || shapes[selectedIndex]?.type !== 'text') return;
+  const s = shapes[selectedIndex];
+  s.fontSize = parseInt(document.getElementById('edit-font-size').value, 10) || 24;
+  s.text = document.getElementById('edit-text-content').value;
+}
+
+function applyEditTextBorderToSelected() {
+  if (selectedIndex < 0 || shapes[selectedIndex]?.type !== 'text') return;
+  const s = shapes[selectedIndex];
+  const borderRadio = document.querySelector('input[name="edit-text-border"]:checked');
+  s.borderStyle = (borderRadio && borderRadio.value) || 'none';
+  if (s.borderStyle !== 'none') {
+    s.colorBg = document.getElementById('edit-text-bg').value || '#1a1a1e';
+  } else {
+    delete s.colorBg;
+  }
+}
+
+// --- Tool icons
+document.querySelectorAll('#tool-group button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    tool = btn.value;
+    if (tool !== 'label') nextLabelNumberSeq = null;
+    if (tool !== 'crop') {
+      cropPreview = null;
+      document.getElementById('crop-actions').style.display = 'none';
+    }
+    pencilCurrentPath = [];
+    document.querySelectorAll('#tool-group button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedIndex = -1;
+    syncEditPanelFromSelection();
+    if (img) fullRedraw();
+  });
+});
+document.getElementById('tool-arrow').classList.add('active');
+
+function renderSwatches(containerId, setStroke) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  PRESET_COLORS.forEach((pc, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'swatch';
+    btn.title = pc.name;
+    btn.style.background = pc.hex;
+    btn.style.borderColor = (pc.hex === '#ffffff' || pc.hex === '#9ca3af') ? '#3f3f46' : 'transparent';
+    if (pc.hex === '#000000' || pc.hex === '#374151') btn.style.border = '2px solid #3f3f46';
+    btn.addEventListener('click', () => {
+      if (setStroke) {
+        color = pc.hex;
+        document.getElementById('color').value = pc.hex;
+        document.querySelectorAll('#swatch-stroke .swatch').forEach(b => b.classList.remove('active'));
+      } else {
+        colorBg = pc.hex;
+        document.querySelectorAll('#swatch-bg .swatch').forEach(b => b.classList.remove('active'));
+      }
+      btn.classList.add('active');
+      if (img) fullRedraw();
+    });
+    el.appendChild(btn);
+  });
+}
+renderSwatches('swatch-stroke', true);
+renderSwatches('swatch-bg', false);
+
+document.getElementById('color').oninput = e => {
+  color = e.target.value;
+  document.querySelectorAll('#swatch-stroke .swatch').forEach((s, i) => {
+    s.classList.toggle('active', PRESET_COLORS[i] && PRESET_COLORS[i].hex.toLowerCase() === color.toLowerCase());
+  });
+  if (img) fullRedraw();
+};
+
+document.getElementById('line-size').onchange = e => {
+  lineSizePx = parseInt(e.target.value, 10) || 8;
+  if (img) fullRedraw();
+};
+document.querySelectorAll('#line-type-group .line-type-btn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    lineType = btn.value;
+    document.querySelectorAll('#line-type-group .line-type-btn').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    if (img) fullRedraw();
+  });
+});
+document.getElementById('font-size').oninput = document.getElementById('font-size').onchange = e => {
+  const v = parseInt(e.target.value, 10);
+  if (v >= 10 && v <= 120) fontSizePx = v;
+  if (img) fullRedraw();
+};
+lineSizePx = parseInt(document.getElementById('line-size').value, 10) || 8;
+lineType = document.querySelector('#line-type-group .line-type-btn.active')?.value || 'solid';
+fontSizePx = parseInt(document.getElementById('font-size').value, 10) || 24;
+
+function closeEditDialogAndDeselect() {
+  selectedIndex = -1;
+  syncEditPanelFromSelection();
+  if (img) fullRedraw();
+}
+document.getElementById('edit-dialog-close').addEventListener('click', closeEditDialogAndDeselect);
+document.getElementById('crop-apply').addEventListener('click', () => { applyCrop(); });
+document.getElementById('crop-cancel').addEventListener('click', () => {
+  cropPreview = null;
+  cropResizeHandle = null;
+  document.getElementById('crop-actions').style.display = 'none';
+  if (img) fullRedraw();
+});
+document.getElementById('btn-resize-main').addEventListener('click', () => {
+  var el = document.getElementById('resize-actions');
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+});
+function offsetShapesForPadding(baseShapes, dx, dy) {
+  return baseShapes.map(function (s) {
+    var c = JSON.parse(JSON.stringify(s));
+    if (c.type === 'arrow' || c.type === 'line') {
+      c.from.x += dx; c.from.y += dy; c.to.x += dx; c.to.y += dy;
+    } else if (c.type === 'box' || c.type === 'highlight' || c.type === 'image') {
+      c.x += dx; c.y += dy;
+    } else if (c.type === 'text' || c.type === 'label') {
+      c.x += dx; c.y += dy;
+    } else if (c.type === 'pencil' && c.points) {
+      c.points.forEach(function (pt) { pt.x += dx; pt.y += dy; });
+    }
+    return c;
+  });
+}
+
+function updateCanvasPaddingResultLabel() {
+  var el = document.getElementById('canvas-size-result');
+  if (!dialogBaseState) { el.textContent = '— × —'; return; }
+  if (!dialogBaseState.baseImg) { el.textContent = dialogBaseState.w + ' × ' + dialogBaseState.h; return; }
+  var top = parseInt(document.getElementById('canvas-pad-top').value, 10) || 0;
+  var left = parseInt(document.getElementById('canvas-pad-left').value, 10) || 0;
+  var right = parseInt(document.getElementById('canvas-pad-right').value, 10) || 0;
+  var bottom = parseInt(document.getElementById('canvas-pad-bottom').value, 10) || 0;
+  var newW = Math.max(1, dialogBaseState.w + left + right);
+  var newH = Math.max(1, dialogBaseState.h + top + bottom);
+  el.textContent = newW + ' × ' + newH;
+}
+
+function updateCanvasPaddingRealtime() {
+  if (!dialogBaseState || !dialogBaseState.baseImg) return;
+  var top = parseInt(document.getElementById('canvas-pad-top').value, 10) || 0;
+  var left = parseInt(document.getElementById('canvas-pad-left').value, 10) || 0;
+  var right = parseInt(document.getElementById('canvas-pad-right').value, 10) || 0;
+  var bottom = parseInt(document.getElementById('canvas-pad-bottom').value, 10) || 0;
+  var newW = Math.max(1, dialogBaseState.w + left + right);
+  var newH = Math.max(1, dialogBaseState.h + top + bottom);
+  var off = document.createElement('canvas');
+  off.width = newW;
+  off.height = newH;
+  var octx = off.getContext('2d');
+  octx.fillStyle = CANVAS_EXPAND_BG;
+  octx.fillRect(0, 0, newW, newH);
+  octx.drawImage(dialogBaseState.baseImg, 0, 0, dialogBaseState.w, dialogBaseState.h, left, top, dialogBaseState.w, dialogBaseState.h);
+  var dataUrl = off.toDataURL('image/png');
+  var im = new Image();
+  var baseShapesRef = dialogBaseState.baseShapes;
+  im.onload = function () {
+    if (!dialogBaseState) return;
+    canvas.width = newW;
+    canvas.height = newH;
+    img = im;
+    shapes = offsetShapesForPadding(baseShapesRef, left, top);
+    selectedIndex = -1;
+    syncEditPanelFromSelection();
+    fullRedraw();
+    updateCanvasPaddingResultLabel();
+  };
+  im.src = dataUrl;
+}
+
+function restoreCanvasFromDialogBase() {
+  if (!dialogBaseState) return;
+  var base = dialogBaseState;
+  if (base.baseImg) {
+    canvas.width = base.w;
+    canvas.height = base.h;
+    img = base.baseImg;
+    shapes = JSON.parse(JSON.stringify(base.baseShapes));
+    selectedIndex = -1;
+    syncEditPanelFromSelection();
+    fullRedraw();
+  }
+}
+
+document.getElementById('btn-clear-all').addEventListener('click', () => {
+  if (!img) return;
+  shapes = [];
+  undoStack = [];
+  redoStack = [];
+  selectedIndex = -1;
+  nextLabelNumberSeq = null;
+  copiedShape = null;
+  cropPreview = null;
+  document.getElementById('crop-actions').style.display = 'none';
+  document.getElementById('edit-dialog').classList.remove('visible');
+  syncEditPanelFromSelection();
+  fullRedraw();
+});
+
+document.getElementById('btn-canvas-border').addEventListener('click', () => {
+  if (!img) return;
+  var w = canvas.width, h = canvas.height;
+  dialogBaseState = {
+    w: w,
+    h: h,
+    baseImg: null,
+    baseShapes: JSON.parse(JSON.stringify(shapes))
+  };
+  var off = document.createElement('canvas');
+  off.width = w;
+  off.height = h;
+  off.getContext('2d').drawImage(img, 0, 0);
+  var clone = new Image();
+  clone.onload = function () {
+    dialogBaseState.baseImg = clone;
+    updateCanvasPaddingResultLabel();
+    updateCanvasPaddingRealtime();
+  };
+  clone.src = off.toDataURL('image/png');
+  document.getElementById('canvas-pad-top').value = '0';
+  document.getElementById('canvas-pad-left').value = '0';
+  document.getElementById('canvas-pad-right').value = '0';
+  document.getElementById('canvas-pad-bottom').value = '0';
+  document.getElementById('canvas-size-dialog').classList.add('visible');
+  updateCanvasPaddingResultLabel();
+  document.getElementById('canvas-pad-top').focus();
+});
+
+function closeCanvasSizeDialog(restore) {
+  if (restore) restoreCanvasFromDialogBase();
+  dialogBaseState = null;
+  document.getElementById('canvas-size-dialog').classList.remove('visible');
+}
+
+function applyCanvasSizeFromDialog() {
+  closeCanvasSizeDialog(false);
+}
+
+document.getElementById('canvas-size-ok').addEventListener('click', applyCanvasSizeFromDialog);
+document.getElementById('canvas-size-cancel').addEventListener('click', function () { closeCanvasSizeDialog(true); });
+document.getElementById('canvas-pad-top').addEventListener('input', function () { updateCanvasPaddingRealtime(); updateCanvasPaddingResultLabel(); });
+document.getElementById('canvas-pad-left').addEventListener('input', function () { updateCanvasPaddingRealtime(); updateCanvasPaddingResultLabel(); });
+document.getElementById('canvas-pad-right').addEventListener('input', function () { updateCanvasPaddingRealtime(); updateCanvasPaddingResultLabel(); });
+document.getElementById('canvas-pad-bottom').addEventListener('input', function () { updateCanvasPaddingRealtime(); updateCanvasPaddingResultLabel(); });
+document.getElementById('canvas-pad-top').addEventListener('change', function () { updateCanvasPaddingRealtime(); updateCanvasPaddingResultLabel(); });
+document.getElementById('canvas-pad-left').addEventListener('change', function () { updateCanvasPaddingRealtime(); updateCanvasPaddingResultLabel(); });
+document.getElementById('canvas-pad-right').addEventListener('change', function () { updateCanvasPaddingRealtime(); updateCanvasPaddingResultLabel(); });
+document.getElementById('canvas-pad-bottom').addEventListener('change', function () { updateCanvasPaddingRealtime(); updateCanvasPaddingResultLabel(); });
+document.getElementById('canvas-size-dialog').addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { e.preventDefault(); closeCanvasSizeDialog(true); }
+});
+document.getElementById('resize-apply').addEventListener('click', () => {
+  if (!img) return;
+  var pct = parseInt(document.getElementById('resize-percent').value, 10) || 100;
+  if (pct < 10 || pct > 400) return;
+  var newW = Math.round(canvas.width * pct / 100);
+  var newH = Math.round(canvas.height * pct / 100);
+  if (newW < 1 || newH < 1) return;
+  var off = document.createElement('canvas');
+  off.width = newW;
+  off.height = newH;
+  var octx = off.getContext('2d');
+  octx.drawImage(img, 0, 0, canvas.width, canvas.height, 0, 0, newW, newH);
+  var dataUrl = off.toDataURL('image/png');
+  var im = new Image();
+  im.onload = function () {
+    var scale = newW / canvas.width;
+    canvas.width = newW;
+    canvas.height = newH;
+    img = im;
+    shapes.forEach(function (s) {
+      if (s.type === 'arrow' || s.type === 'line') {
+        s.from.x *= scale; s.from.y *= scale; s.to.x *= scale; s.to.y *= scale;
+      } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+        s.x *= scale; s.y *= scale; s.w *= scale; s.h *= scale;
+      } else if (s.type === 'text') {
+        s.x *= scale; s.y *= scale;
+        if (s.fontSize != null) s.fontSize = Math.max(10, Math.round(s.fontSize * scale));
+      } else if (s.type === 'label') {
+        s.x *= scale; s.y *= scale;
+        if (s.r != null) s.r = Math.max(LABEL_MIN_R, Math.round(s.r * scale));
+      } else if (s.type === 'pencil' && s.points) {
+        s.points.forEach(function (pt) { pt.x *= scale; pt.y *= scale; });
+      }
+    });
+    selectedIndex = -1;
+    document.getElementById('resize-actions').style.display = 'none';
+    syncEditPanelFromSelection();
+    fullRedraw();
+  };
+  im.src = dataUrl;
+});
+document.getElementById('edit-copy').addEventListener('click', () => {
+  if (selectedIndex >= 0 && shapes[selectedIndex]) {
+    copiedShape = cloneShape(shapes[selectedIndex], 0, 0);
+    if (copiedShape) {
+      selectedIndex = -1;
+      syncEditPanelFromSelection();
+      if (img) fullRedraw();
+    }
+  }
+});
+document.getElementById('edit-delete').addEventListener('click', () => {
+  if (selectedIndex >= 0 && shapes[selectedIndex]) {
+    clearRedo();
+    shapes.splice(selectedIndex, 1);
+    selectedIndex = -1;
+    syncEditPanelFromSelection();
+    if (img) fullRedraw();
+  }
+});
+
+(function initTextDialog() {
+  const dialog = document.getElementById('text-dialog');
+  const input = document.getElementById('text-dialog-input');
+  const btnOk = document.getElementById('text-dialog-ok');
+  const btnCancel = document.getElementById('text-dialog-cancel');
+  function closeTextDialog() {
+    dialog.classList.remove('visible');
+    pendingTextPos = null;
+  }
+  btnCancel.addEventListener('click', closeTextDialog);
+  document.querySelectorAll('#text-dialog input[name="text-border"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      const v = document.querySelector('#text-dialog input[name="text-border"]:checked')?.value;
+      document.getElementById('text-dialog-bg-wrap').style.display = (v && v !== 'none') ? '' : 'none';
+    });
+  });
+  btnOk.addEventListener('click', function () {
+    const t = (input.value || '').trim();
+    const borderRadio = document.querySelector('#text-dialog input[name="text-border"]:checked');
+    const borderStyle = (borderRadio && borderRadio.value) || 'none';
+    const pos = pendingTextPos;
+    const colorBg = (borderStyle !== 'none') ? (document.getElementById('text-dialog-bg').value || '#1a1a1e') : undefined;
+    closeTextDialog();
+    if (!pos || !t) return;
+    clearRedo();
+    const shape = {
+      type: 'text',
+      x: pos.x,
+      y: pos.y,
+      text: t,
+      color,
+      fontSize: fontSizePx,
+      borderStyle: borderStyle
+    };
+    if (colorBg != null) shape.colorBg = colorBg;
+    shapes.push(shape);
+    undoStack.push({ type: 'shape' });
+    if (img) fullRedraw();
+  });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeTextDialog();
+  });
+})();
+document.getElementById('edit-color').oninput = () => { applyEditToSelected(); };
+document.getElementById('edit-line-size').onchange = () => { applyEditToSelected(); };
+document.querySelectorAll('#edit-line-type-group .line-type-btn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('#edit-line-type-group .line-type-btn').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    applyEditToSelected();
+  });
+});
+document.getElementById('edit-color-bg').oninput = () => { applyEditToSelected(); };
+document.getElementById('edit-font-size').oninput = document.getElementById('edit-font-size').onchange = () => {
+  applyEditTextFontToSelected();
+  if (img) fullRedraw();
+};
+document.getElementById('edit-text-content').oninput = document.getElementById('edit-text-content').onchange = () => {
+  applyEditTextFontToSelected();
+  if (img) fullRedraw();
+};
+document.querySelectorAll('input[name="edit-text-border"]').forEach(function (r) {
+  r.addEventListener('change', function () {
+    const v = document.querySelector('input[name="edit-text-border"]:checked')?.value;
+    const show = selectedIndex >= 0 && shapes[selectedIndex]?.type === 'text' && v && v !== 'none';
+    document.getElementById('edit-text-bg-label').style.display = show ? '' : 'none';
+    document.getElementById('edit-text-bg').style.display = show ? '' : 'none';
+    applyEditTextBorderToSelected();
+    if (img) fullRedraw();
+  });
+});
+document.getElementById('edit-text-bg').oninput = () => {
+  applyEditTextBorderToSelected();
+  if (img) fullRedraw();
+};
+document.getElementById('edit-image-w').onchange = document.getElementById('edit-image-h').onchange = () => {
+  applyEditToSelected();
+};
+document.getElementById('edit-label-number').oninput = document.getElementById('edit-label-number').onchange = () => {
+  applyEditToSelected();
+};
+document.getElementById('edit-label-bg').oninput = document.getElementById('edit-label-color').oninput = () => {
+  applyEditToSelected();
+};
+
+(function initEditDialogDrag() {
+  const dialog = document.getElementById('edit-dialog');
+  const header = document.getElementById('edit-dialog-header');
+  if (!dialog || !header) return;
+  let dragging = false;
+  let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+  header.addEventListener('mousedown', function (e) {
+    if (e.button !== 0) return;
+    if (e.target.closest('#edit-dialog-close')) return;
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    const rect = dialog.getBoundingClientRect();
+    startLeft = rect.left;
+    startTop = rect.top;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function (e) {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    dialog.style.left = (startLeft + dx) + 'px';
+    dialog.style.top = (startTop + dy) + 'px';
+    dialog.style.right = 'auto';
+  });
+  document.addEventListener('mouseup', function () {
+    dragging = false;
+  });
+})();
+
+document.getElementById('file').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const im = new Image();
+  im.onload = () => fitCanvasToImage(im);
+  im.src = URL.createObjectURL(f);
+};
+document.getElementById('undo').onclick = undo;
+
+// --- Zoom: Ctrl+Scroll
+const canvasZoomWrap = document.getElementById('canvas-zoom-wrap');
+if (canvasZoomWrap) {
+  function applyZoom() {
+    canvasZoomWrap.style.transform = 'scale(' + zoom + ')';
+  }
+  canvasZoomWrap.addEventListener('wheel', function (e) {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    zoom = Math.max(0.25, Math.min(3, zoom + delta));
+    applyZoom();
+  }, { passive: false });
+}
+
+// --- Copy/Paste: Ctrl+C / Ctrl+V | Undo: Ctrl+Z / Ctrl+U | ESC ยกเลิก Crop
+document.addEventListener('keydown', function (e) {
+  if (e.code === 'Escape') {
+    if (cropPreview) {
+      cropPreview = null;
+      cropResizeHandle = null;
+      document.getElementById('crop-actions').style.display = 'none';
+      if (img) fullRedraw();
+      e.preventDefault();
+    }
+    return;
+  }
+  if (!e.ctrlKey) return;
+  if (e.code === 'KeyZ' || e.code === 'KeyU') {
+    undo();
+    e.preventDefault();
+    return;
+  }
+  if (e.code === 'KeyY') {
+    redo();
+    e.preventDefault();
+    return;
+  }
+  if (e.code === 'KeyC') {
+    if (selectedIndex >= 0 && shapes[selectedIndex]) {
+      copiedShape = cloneShape(shapes[selectedIndex], 0, 0);
+      e.preventDefault();
+    }
+    return;
+  }
+  if (e.code === 'KeyV') {
+    if (copiedShape) {
+      const pasted = cloneShape(copiedShape, PASTE_OFFSET, PASTE_OFFSET);
+      if (pasted) {
+        if (pasted.type === 'label') pasted.number = getNextLabelNumber();
+        clearRedo();
+        shapes.push(pasted);
+        undoStack.push({ type: 'shape' });
+        selectedIndex = shapes.length - 1;
+        syncEditPanelFromSelection();
+        if (img) fullRedraw();
+      }
+      e.preventDefault();
+    }
+    return;
+  }
+});
+
+// --- Mouse: draw / select / move / resize
+canvas.addEventListener('mousedown', (e) => {
+  if (!img) return;
+  const p = getPos(e);
+  if (tool === 'crop') {
+    if (cropPreview && cropPreview.w > 0 && cropPreview.h > 0) {
+      var ch = getCropHandleAt(p);
+      if (ch !== null) {
+        dragMode = 'cropResize';
+        cropResizeHandle = ch;
+        start = { ...p };
+        fullRedraw();
+        return;
+      }
+      return;
+    }
+    selectedIndex = -1;
+    syncEditPanelFromSelection();
+    dragMode = 'draw';
+    start = { ...p };
+    current = { ...p };
+    return;
+  }
+  const handle = getHandleAt(p);
+  if (handle !== null) {
+    dragMode = 'resize';
+    resizeHandle = handle;
+    start = { ...p };
+    return;
+  }
+  const idx = getShapeAt(p);
+  if (idx >= 0) {
+    selectedIndex = idx;
+    syncEditPanelFromSelection();
+    dragMode = 'move';
+    start = { ...p };
+    fullRedraw();
+    return;
+  }
+  selectedIndex = -1;
+  syncEditPanelFromSelection();
+  if (tool === 'text') {
+    pendingTextPos = { x: p.x, y: p.y };
+    document.getElementById('text-dialog-input').value = '';
+    document.querySelectorAll('#text-dialog input[name="text-border"]').forEach(function (r) {
+      r.checked = r.value === 'none';
+    });
+    document.getElementById('text-dialog-bg-wrap').style.display = 'none';
+    document.getElementById('text-dialog').classList.add('visible');
+    document.getElementById('text-dialog-input').focus();
+    return;
+  }
+  if (tool === 'pencil') {
+    pencilCurrentPath = [{ x: p.x, y: p.y }];
+    dragMode = 'draw';
+    start = { ...p };
+    current = { ...p };
+    fullRedraw();
+    return;
+  }
+  dragMode = 'draw';
+  start = { ...p };
+  current = { ...p };
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!img) return;
+  const p = getPos(e);
+  if (dragMode === 'draw' && start) {
+    if (tool === 'pencil') {
+      pencilCurrentPath.push({ x: p.x, y: p.y });
+      fullRedraw();
+      return;
+    }
+    current = p;
+    fullRedraw(drawPreviewShape());
+    return;
+  }
+  if (dragMode === 'move' && start && selectedIndex >= 0) {
+    const dx = p.x - start.x, dy = p.y - start.y;
+    start = p;
+    const s = shapes[selectedIndex];
+    if (s.type === 'arrow' || s.type === 'line') {
+      s.from.x += dx; s.from.y += dy; s.to.x += dx; s.to.y += dy;
+    } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+      s.x += dx; s.y += dy;
+    } else if (s.type === 'text' || s.type === 'label') {
+      s.x += dx; s.y += dy;
+    } else if (s.type === 'pencil' && s.points) {
+      s.points.forEach(function (pt) { pt.x += dx; pt.y += dy; });
+    }
+    fullRedraw();
+    return;
+  }
+  if (dragMode === 'resize' && start && selectedIndex >= 0 && resizeHandle !== null) {
+    const s = shapes[selectedIndex];
+    if (s.type === 'label') {
+      const nh = resizeHandle;
+      let r = s.r != null ? s.r : LABEL_DEFAULT_R;
+      if (nh === 0) r = s.y - p.y;
+      else if (nh === 1) r = p.x - s.x;
+      else if (nh === 2) r = p.y - s.y;
+      else if (nh === 3) r = s.x - p.x;
+      s.r = Math.max(LABEL_MIN_R, Math.round(r));
+      fullRedraw();
+      return;
+    }
+    if (s.type === 'arrow' || s.type === 'line') {
+      if (resizeHandle === 0) { s.from.x = p.x; s.from.y = p.y; }
+          else { s.to.x = p.x; s.to.y = p.y; }
+    } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+      let {x, y, w, h} = s;
+      const nh = resizeHandle;
+      if (nh === 0) { x = p.x; y = p.y; w = s.x + s.w - p.x; h = s.y + s.h - p.y; }
+      else if (nh === 1) { y = p.y; h = s.y + s.h - p.y; }
+      else if (nh === 2) { y = p.y; w = p.x - s.x; h = s.y + s.h - p.y; }
+      else if (nh === 3) { w = p.x - s.x; }
+      else if (nh === 4) { w = p.x - s.x; h = p.y - s.y; }
+      else if (nh === 5) { h = p.y - s.y; }
+      else if (nh === 6) { x = p.x; w = s.x + s.w - p.x; h = p.y - s.y; }
+      else if (nh === 7) { x = p.x; w = s.x + s.w - p.x; }
+      if (w < 0) { x += w; w = -w; }
+      if (h < 0) { y += h; h = -h; }
+      s.x = x; s.y = y; s.w = w; s.h = h;
+    }
+    fullRedraw();
+    return;
+  }
+  if (dragMode === 'cropResize' && cropPreview && cropResizeHandle !== null && start) {
+    var r = cropPreview;
+    var x = r.x, y = r.y, w = r.w, h = r.h;
+    var nh = cropResizeHandle;
+    if (nh === 0) { x = p.x; y = p.y; w = r.x + r.w - p.x; h = r.y + r.h - p.y; }
+    else if (nh === 1) { y = p.y; h = r.y + r.h - p.y; }
+    else if (nh === 2) { y = p.y; w = p.x - r.x; h = r.y + r.h - p.y; }
+    else if (nh === 3) { w = p.x - r.x; }
+    else if (nh === 4) { w = p.x - r.x; h = p.y - r.y; }
+    else if (nh === 5) { h = p.y - r.y; }
+    else if (nh === 6) { x = p.x; w = r.x + r.w - p.x; h = p.y - r.y; }
+    else if (nh === 7) { x = p.x; w = r.x + r.w - p.x; }
+    if (w < 0) { x += w; w = -w; }
+    if (h < 0) { y += h; h = -h; }
+    cropPreview = { x: x, y: y, w: Math.max(1, w), h: Math.max(1, h) };
+    fullRedraw();
+    return;
+  }
+});
+
+function drawPreviewShape() {
+  if (!start || !current) return null;
+  if (tool === 'crop' || tool === 'pencil') return null;
+  const base = { color, lineWidth: lineSizePx, lineType };
+  if (tool === 'arrow') return { ...base, type: 'arrow', from: { ...start }, to: { ...current } };
+  if (tool === 'line') return { ...base, type: 'line', from: { ...start }, to: { ...current } };
+  const x = Math.min(start.x, current.x), y = Math.min(start.y, current.y);
+  const w = Math.abs(current.x - start.x), h = Math.abs(current.y - start.y);
+  if (tool === 'box') return { ...base, type: 'box', x, y, w, h };
+  if (tool === 'highlight') return { ...base, type: 'highlight', x, y, w, h, colorBg };
+  if (tool === 'label') {
+    const r = Math.max(LABEL_MIN_R, Math.hypot(current.x - start.x, current.y - start.y));
+    return { type: 'label', x: start.x, y: start.y, r, number: getNextLabelNumberPeek(), color, colorBg: '#ffffff' };
+  }
+  return null;
+}
+
+canvas.addEventListener('mouseup', (e) => {
+  if (dragMode === 'draw' && start && current) {
+    if (tool === 'crop') {
+      cropPreview = getCropRect();
+      document.getElementById('crop-actions').style.display = cropPreview && cropPreview.w > 0 && cropPreview.h > 0 ? '' : 'none';
+      if (!cropPreview || cropPreview.w <= 0 || cropPreview.h <= 0) cropPreview = null;
+    } else if (tool === 'pencil' && pencilCurrentPath.length >= 2) {
+      clearRedo();
+      shapes.push({
+        type: 'pencil',
+        points: pencilCurrentPath.slice(),
+        color: color,
+        lineWidth: lineSizePx
+      });
+      undoStack.push({ type: 'shape' });
+      pencilCurrentPath = [];
+    } else if (tool !== 'pencil') {
+      const prev = drawPreviewShape();
+      if (prev) {
+        if (prev.type === 'label') prev.number = getNextLabelNumber();
+        clearRedo();
+        shapes.push(prev);
+        undoStack.push({ type: 'shape' });
+      }
+    }
+    dragMode = null;
+    start = null;
+    current = null;
+    pencilCurrentPath = tool === 'pencil' ? [] : pencilCurrentPath;
+    fullRedraw();
+  }
+  if (dragMode === 'move' || dragMode === 'resize') {
+    dragMode = null;
+    resizeHandle = null;
+  }
+  if (dragMode === 'cropResize') {
+    dragMode = null;
+    cropResizeHandle = null;
+  }
+});
+
+document.addEventListener('mousemove', function (e) {
+  if (dragMode === 'canvasBorderResize') {
+    var p = getCanvasPosFromClient(e.clientX, e.clientY);
+    if (p) lastCanvasResizePos = p;
+  }
+});
+
+document.addEventListener('mouseup', function (e) {
+  if (dragMode === 'canvasBorderResize' && canvasBorderResizeHandle !== null) {
+    var p = lastCanvasResizePos || getCanvasPosFromClient(e.clientX, e.clientY);
+    if (p) {
+      lastCanvasResizePos = null;
+      var params = getCanvasResizeParams(canvasBorderResizeHandle, p);
+      if (params.newW !== canvas.width || params.newH !== canvas.height) {
+        applyCanvasResize(params.newW, params.newH, params.ox, params.oy);
+      } else {
+        canvasBorderResizeHandle = null;
+        if (img) fullRedraw();
+      }
+    }
+    dragMode = null;
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  if (dragMode === 'draw' && start) {
+    start = null;
+    current = null;
+    if (tool === 'pencil') pencilCurrentPath = [];
+    fullRedraw();
+  }
+  dragMode = null;
+  resizeHandle = null;
+  cropResizeHandle = null;
+  canvasBorderResizeHandle = null;
+});
+
+document.getElementById('save').onclick = async () => {
+  if (!img) return alert("กรุณาโหลดรูปก่อน");
+  const params = new URLSearchParams(window.location.search);
+  const imageUrl = params.get('image');
+  if (!imageUrl) {
+    alert("เปิดจากหน้าหลัก (เลือกแก้ไขที่รูป) เพื่อบันทึกทับรูปบน Server");
+    return;
+  }
+  let filename = '';
+  try {
+    const u = new URL(imageUrl);
+    const pathname = u.pathname || '';
+    const match = pathname.match(/\/image\/(.+)$/) || pathname.match(/\/([^/]+)$/);
+    filename = match ? decodeURIComponent(match[1]) : '';
+  } catch (_) {}
+  if (!filename) {
+    alert("ไม่พบชื่อไฟล์รูปเดิม");
+    return;
+  }
+  filename = filename.split('?')[0].split('#')[0].trim() || filename;
+  const isJpeg = /\.(jpe?g|jfif)$/i.test(filename);
+  const mime = isJpeg ? 'image/jpeg' : 'image/png';
+  const quality = isJpeg ? 0.92 : undefined;
+  const dataUrl = quality != null ? canvas.toDataURL(mime, quality) : canvas.toDataURL(mime);
+  const blob = await (await fetch(dataUrl)).blob();
+  const blobWithType = new Blob([blob], { type: mime });
+  const form = new FormData();
+  form.append('image', blobWithType, isJpeg ? 'annotated.jpg' : 'annotated.png');
+  form.append('filename', filename);
+  const api = (window.location.origin || '') + '/api/upload-overwrite';
+  try {
+    const res = await fetch(api, { method: 'POST', body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Save ไม่สำเร็จ');
+      return;
+    }
+    alert("บันทึกทับรูปบน Server แล้ว");
+    try { window.parent.postMessage({ type: 'editimage-saved' }, '*'); } catch (_) {}
+  } catch (e) {
+    alert("เกิดข้อผิดพลาด: " + (e.message || 'Save ไม่สำเร็จ'));
+  }
+};
+
+// ลากวางรูปเพิ่มเป็น item
+(function initDropImage() {
+  const wrap = document.getElementById('wrap');
+  if (!wrap) return;
+  wrap.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  wrap.addEventListener('drop', function (e) {
+    e.preventDefault();
+    if (!img) return;
+    const files = e.dataTransfer.files;
+    if (!files || !files.length) return;
+    let file = null;
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].type && files[i].type.startsWith('image/')) { file = files[i]; break; }
+    }
+    if (!file) return;
+    const pos = getPosFromClient(e.clientX, e.clientY);
+    const reader = new FileReader();
+    reader.onload = function () {
+      const dataUrl = reader.result;
+      const im = new Image();
+      im.onload = function () {
+        let w = im.naturalWidth, h = im.naturalHeight;
+        const maxW = 400, maxH = 400;
+        if (w > maxW || h > maxH) {
+          const scale = Math.min(maxW / w, maxH / h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
+        imageCache[dataUrl] = im;
+        clearRedo();
+        shapes.push({
+          type: 'image',
+          x: pos.x,
+          y: pos.y,
+          w: w,
+          h: h,
+          src: dataUrl
+        });
+        undoStack.push({ type: 'shape' });
+        selectedIndex = shapes.length - 1;
+        syncEditPanelFromSelection();
+        fullRedraw();
+      };
+      im.onerror = function () { console.warn('Could not decode dropped image'); };
+      im.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+})();
+
+// โหลดรูปจาก query param ?image=... (เมื่อเปิดจาก dialog ใน image-task-result)
+(function loadFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const imageUrl = params.get('image');
+  if (!imageUrl) return;
+  const im = new Image();
+  im.onload = () => { img = im; fitCanvasToImage(im); };
+  im.onerror = () => console.warn('Could not load image from URL');
+  im.src = imageUrl;
+})();
+</script>
+</body>
+</html>

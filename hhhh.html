@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Snippet Notes (Text + Code)</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#0f1115; color:#e7eaf0; }
+    .app { display:grid; grid-template-columns: 320px 1fr; height:100vh; }
+    .side { border-right:1px solid #242833; padding:12px; overflow:auto; }
+    .main { padding:12px; overflow:auto; }
+    h2 { margin: 6px 0 10px; font-size:16px; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    button, select, input[type="text"] {
+      background:#171a21; color:#e7eaf0; border:1px solid #2a3040; border-radius:10px;
+      padding:8px 10px; font-size:14px;
+    }
+    button { cursor:pointer; }
+    button:hover { border-color:#3a4560; }
+    .list { margin-top:10px; display:flex; flex-direction:column; gap:8px; }
+    .item {
+      padding:10px; border:1px solid #242833; border-radius:12px; background:#12151c;
+      cursor:pointer;
+    }
+    .item.active { border-color:#4a67ff; box-shadow:0 0 0 1px #4a67ff33 inset; }
+    .meta { font-size:12px; color:#aeb6c6; display:flex; justify-content:space-between; gap:10px; }
+    .title { font-weight:600; margin:6px 0 2px; }
+    textarea {
+      width:100%; min-height:60vh; resize:vertical;
+      background:#0c0f14; color:#e7eaf0; border:1px solid #242833; border-radius:14px;
+      padding:12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px; line-height:1.5;
+      white-space:pre; overflow:auto;
+    }
+    .field { width:100%; margin:10px 0; }
+    .field label { display:block; font-size:12px; color:#aeb6c6; margin-bottom:6px; }
+    .field input[type="text"] { width:100%; box-sizing:border-box; }
+    .hint { font-size:12px; color:#93a0b8; margin-top:8px; }
+    .danger { border-color:#603a3a !important; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <h2>Snippets</h2>
+      <div class="row">
+        <button onclick="newNote()">+ New</button>
+        <button onclick="exportAllJSON()">Export JSON</button>
+        <label style="display:inline-flex; gap:6px; align-items:center;">
+          <input id="importFile" type="file" accept="application/json" style="display:none" onchange="importAllJSON(this.files[0])" />
+          <button onclick="document.getElementById('importFile').click()">Import JSON</button>
+        </label>
+      </div>
+
+      <div class="list" id="list"></div>
+      <div class="hint">เก็บในเครื่องด้วย localStorage (ไม่มี backend)</div>
+    </aside>
+
+    <main class="main">
+      <h2>Editor (Text + Code)</h2>
+
+      <div class="field">
+        <label>Title</label>
+        <input id="title" type="text" placeholder="เช่น Margin Calculator Notes" oninput="updateActiveFromUI(true)" />
+      </div>
+
+      <div class="row">
+        <div class="field" style="flex:1; min-width:220px;">
+          <label>Language / File Type</label>
+          <select id="lang" onchange="updateActiveFromUI(true)">
+            <option value="text">Text (.txt)</option>
+            <option value="js">JavaScript (.js)</option>
+            <option value="json">JSON (.json)</option>
+            <option value="html">HTML (.html)</option>
+            <option value="css">CSS (.css)</option>
+            <option value="cs">C# (.cs)</option>
+            <option value="net">.NET Notes (.txt)</option>
+            <option value="py">Python (.py)</option>
+            <option value="bat">Batch (.bat)</option>
+            <option value="sql">SQL (.sql)</option>
+            <option value="md">Markdown (.md)</option>
+            <option value="other">Other (.txt)</option>
+          </select>
+        </div>
+
+        <div class="field" style="flex:2; min-width:260px;">
+          <label>Filename (optional)</label>
+          <input id="filename" type="text" placeholder="เช่น appV1.py หรือ Program.cs" oninput="updateActiveFromUI(true)" />
+        </div>
+
+        <div class="row" style="align-self:flex-end;">
+          <button onclick="downloadActive()">Download File</button>
+          <button class="danger" onclick="deleteNote(activeId)">Delete</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Content (Text + Code)</label>
+        <textarea id="content" placeholder="วางโค้ดหรือพิมพ์โน้ตได้เลย... (ปน text + code ได้)" oninput="updateActiveFromUI(false)"></textarea>
+      </div>
+
+      <div class="hint">
+        Tip: ถ้าอยาก “แยกหลายไฟล์ในโน้ตเดียว” บอกได้ เดี๋ยวผมเพิ่มฟีเจอร์ split ตาม marker เช่น <code>---file: Program.cs---</code>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // ===== Storage Key =====
+    const STORAGE_KEY = "snippet_notes_v1";
+
+    // ===== State =====
+    let notes = [];
+    let activeId = null;
+    let saveTimer = null;
+
+    // ===== Utilities =====
+    function uid() {
+      return Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    function extFromLang(lang) {
+      const map = {
+        text: "txt", other: "txt", net: "txt",
+        js: "js", json: "json", html: "html", css: "css",
+        cs: "cs", py: "py", bat: "bat", sql: "sql", md: "md"
+      };
+      return map[lang] || "txt";
+    }
+
+    function nowISO() {
+      return new Date().toISOString();
+    }
+
+    // ===== Persistence =====
+    function loadAll() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        notes = raw ? JSON.parse(raw) : [];
+      } catch {
+        notes = [];
+      }
+      if (!Array.isArray(notes)) notes = [];
+      if (notes.length === 0) {
+        // starter note
+        notes.push({
+          id: uid(),
+          title: "Welcome",
+          lang: "md",
+          filename: "README.md",
+          content: "# Snippet Notes\n\nวางโค้ด/ข้อความปนกันได้ แล้วกด Download หรือ Export JSON\n",
+          createdAt: nowISO(),
+          updatedAt: nowISO()
+        });
+      }
+      activeId = notes[0]?.id ?? null;
+      renderList();
+      selectNote(activeId);
+    }
+
+    function saveAll() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    }
+
+    // debounce save
+    function scheduleSave() {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => saveAll(), 250);
+    }
+
+    // ===== CRUD =====
+    function newNote() {
+      const n = {
+        id: uid(),
+        title: "New Note",
+        lang: "text",
+        filename: "",
+        content: "",
+        createdAt: nowISO(),
+        updatedAt: nowISO()
+      };
+      notes.unshift(n);
+      activeId = n.id;
+      renderList();
+      selectNote(activeId);
+      saveAll();
+    }
+
+    function selectNote(id) {
+      activeId = id;
+      const n = notes.find(x => x.id === activeId);
+      if (!n) return;
+
+      document.getElementById("title").value = n.title ?? "";
+      document.getElementById("lang").value = n.lang ?? "text";
+      document.getElementById("filename").value = n.filename ?? "";
+      document.getElementById("content").value = n.content ?? "";
+
+      renderList();
+    }
+
+    function deleteNote(id) {
+      if (!id) return;
+      const idx = notes.findIndex(x => x.id === id);
+      if (idx === -1) return;
+      notes.splice(idx, 1);
+
+      if (notes.length === 0) {
+        newNote();
+        return;
+      }
+      activeId = notes[0].id;
+      renderList();
+      selectNote(activeId);
+      saveAll();
+    }
+
+    function updateActiveFromUI(lightSave) {
+      const n = notes.find(x => x.id === activeId);
+      if (!n) return;
+
+      n.title = document.getElementById("title").value;
+      n.lang = document.getElementById("lang").value;
+      n.filename = document.getElementById("filename").value;
+      n.content = document.getElementById("content").value;
+      n.updatedAt = nowISO();
+
+      renderList();
+      if (lightSave) scheduleSave();
+      else scheduleSave();
+    }
+
+    // ===== UI Render =====
+    function renderList() {
+      const el = document.getElementById("list");
+      el.innerHTML = "";
+
+      for (const n of notes) {
+        const div = document.createElement("div");
+        div.className = "item" + (n.id === activeId ? " active" : "");
+        div.onclick = () => selectNote(n.id);
+
+        const ext = extFromLang(n.lang);
+        const fileLabel = (n.filename && n.filename.trim()) ? n.filename.trim() : `(no name).${ext}`;
+
+        div.innerHTML = `
+          <div class="meta">
+            <span>${(n.lang || "text").toUpperCase()}</span>
+            <span>${new Date(n.updatedAt).toLocaleString()}</span>
+          </div>
+          <div class="title">${escapeHtml(n.title || "Untitled")}</div>
+          <div class="meta"><span>${escapeHtml(fileLabel)}</span><span>${(n.content?.length || 0)} chars</span></div>
+        `;
+        el.appendChild(div);
+      }
+    }
+
+    function escapeHtml(s) {
+      return (s ?? "").replace(/[&<>"']/g, c => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[c]));
+    }
+
+    // ===== Export / Import / Download =====
+    function downloadActive() {
+      const n = notes.find(x => x.id === activeId);
+      if (!n) return;
+
+      const lang = n.lang || "text";
+      const ext = extFromLang(lang);
+
+      let filename = (n.filename && n.filename.trim()) ? n.filename.trim() : (sanitizeFileName(n.title || "snippet") + "." + ext);
+
+      // if user typed filename without extension, add
+      if (!filename.includes(".")) filename += "." + ext;
+
+      const blob = new Blob([n.content ?? ""], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportAllJSON() {
+      const payload = {
+        version: 1,
+        exportedAt: nowISO(),
+        notes
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "snippet-notes-export.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function importAllJSON(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const obj = JSON.parse(String(reader.result || "{}"));
+          if (obj && Array.isArray(obj.notes)) {
+            notes = obj.notes;
+            if (notes.length === 0) newNote();
+            activeId = notes[0].id;
+            saveAll();
+            renderList();
+            selectNote(activeId);
+          } else {
+            alert("ไฟล์ JSON ไม่ถูกต้อง: ไม่มี notes[]");
+          }
+        } catch (e) {
+          alert("อ่าน JSON ไม่สำเร็จ");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function sanitizeFileName(name) {
+      return String(name).trim().replace(/[\\/:*?"<>|]+/g, "_").replace(/\s+/g, "-").slice(0, 80) || "snippet";
+    }
+
+    // ===== Init =====
+    loadAll();
+  </script>
+</body>
+</html>
