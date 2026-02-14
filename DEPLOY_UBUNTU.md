@@ -57,7 +57,7 @@ Paste (adjust paths if needed):
 
 ```ini
 [Unit]
-Description=UserReport Flask App
+Description=UserReport Gunicorn Service
 After=network.target
 
 [Service]
@@ -65,11 +65,16 @@ User=www-data
 Group=www-data
 WorkingDirectory=/var/www/UserReport
 Environment="PATH=/var/www/UserReport/venv/bin"
-ExecStart=/var/www/UserReport/venv/bin/gunicorn -w 2 -b 127.0.0.1:5000 app:app
+ExecStart=/var/www/UserReport/venv/bin/gunicorn \
+          -w 2 \
+          -b 0.0.0.0:5000 \
+          app:app
+
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
+
 ```
 
 Then:
@@ -79,9 +84,25 @@ sudo systemctl daemon-reload
 sudo systemctl enable userreport
 sudo systemctl start userreport
 sudo systemctl status userreport
+
+sudo ufw allow 5000/tcp
+sudo ufw reload
+sudo ufw status
 ```
 
 Use `127.0.0.1:5000` if you put Nginx in front (see below).
+
+ให้สิทธิ์โฟลเดอร์ (สำคัญมาก)
+```bash
+sudo chown -R www-data:www-data /var/www/UserReport
+sudo chmod -R 755 /var/www/UserReport
+```
+ตั้ง DNS ใน Cloudflare
+```bash
+อย่าเปิด Port 5000 สู่โลกภายนอก
+sudo ufw delete allow 5000
+
+```
 
 ## 6. Optional: Nginx as reverse proxy
 
@@ -95,14 +116,56 @@ Create a site config:
 
 ```bash
 sudo nano /etc/nginx/sites-available/userreport
+sudo nano /etc/nginx/sites-available/report.cayoshibot.com
 ```
 
 Example (replace `your-domain.com` or use `_` for default server):
 
-```nginx
+```bash
+
 server {
     listen 80;
-    server_name your-domain.com;   # or your server IP
+    server_name report.cayoshibot.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name report.cayoshibot.com;
+
+    root /var/www/react-report;
+    index index.html;
+
+    ssl_certificate /etc/letsencrypt/live/report.cayoshibot.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/report.cayoshibot.com/privkey.pem;
+
+    # React SPA
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API เท่านั้นที่ไป port 2000
+    location /api/ {
+        proxy_pass http://127.0.0.1:2000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
+
+https://usertask.cayoshibot.com/
+----------------------------
+server {
+    listen 80;
+    server_name usertask.cayoshibot.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name usertask.cayoshibot.com;   # or your server IP
     client_max_body_size 50M;
 
     location / {
@@ -113,6 +176,9 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
+-------------------------------------------------------------------------
+sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d usertask.cayoshibot.com
 ```
 
 Enable and restart:
