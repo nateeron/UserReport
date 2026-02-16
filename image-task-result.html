@@ -1177,6 +1177,23 @@
       return (window.location.pathname || '').replace(/\/[^/]*$/, '') || '';
     }
 
+    function getCookie(name) {
+      var match = document.cookie.match(new RegExp('(^|;)\\s*' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+      return match ? decodeURIComponent(match[2]) : null;
+    }
+    function setCookie(name, value, days) {
+      var expires = '';
+      if (days) {
+        var d = new Date();
+        d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+        expires = '; expires=' + d.toUTCString();
+      }
+      document.cookie = name + '=' + encodeURIComponent(value) + expires + '; path=/';
+    }
+    function deleteCookie(name) {
+      document.cookie = name + '=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    }
+
     function getUpdateDataUrl() {
       var base = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : '';
       if (base) return base + '/api/save';
@@ -2712,8 +2729,8 @@
               currentProjectId = projectId;
               currentPasskey = passkey;
               try {
-                sessionStorage.setItem('lastProjectId', projectId);
-                sessionStorage.setItem('passkey_' + projectId, passkey);
+                setCookie('lastProjectId', projectId, 30);
+                setCookie('passkey_' + projectId, passkey, 30);
               } catch (e) {}
               applyProjectData(res.data);
               updateUrlForProject(selectedProjectName);
@@ -2753,8 +2770,8 @@
             if (!res.ok || !res.data) return;
             applyProjectData(res.data);
             try {
-              sessionStorage.setItem('lastProjectId', currentProjectId);
-              sessionStorage.setItem('passkey_' + currentProjectId, currentPasskey);
+              setCookie('lastProjectId', currentProjectId, 30);
+              setCookie('passkey_' + currentProjectId, currentPasskey, 30);
             } catch (e) {}
             return fetchProjects();
           })
@@ -2772,8 +2789,8 @@
         var lastId = null;
         var savedPasskey = null;
         try {
-          lastId = sessionStorage.getItem('lastProjectId');
-          if (lastId) savedPasskey = sessionStorage.getItem('passkey_' + lastId);
+          lastId = getCookie('lastProjectId');
+          if (lastId) savedPasskey = getCookie('passkey_' + lastId);
         } catch (e) { return; }
         if (!lastId || savedPasskey === null) return;
         var prefix = getApiPrefix();
@@ -2847,7 +2864,7 @@
           if (project) {
             var savedPasskey = null;
             try {
-              savedPasskey = sessionStorage.getItem('passkey_' + project.id);
+              savedPasskey = getCookie('passkey_' + project.id);
             } catch (e) {}
             var isPublic = (project.public || '0') === '1';
             if (savedPasskey !== null && savedPasskey !== undefined) {
@@ -2909,9 +2926,9 @@
       if (btnLogout) {
         btnLogout.addEventListener('click', function () {
           try {
-            var lastId = sessionStorage.getItem('lastProjectId');
-            sessionStorage.removeItem('lastProjectId');
-            if (lastId) sessionStorage.removeItem('passkey_' + lastId);
+            var lastId = getCookie('lastProjectId');
+            deleteCookie('lastProjectId');
+            if (lastId) deleteCookie('passkey_' + lastId);
           } catch (e) {}
           gate.classList.remove('hidden');
           var wrap = document.getElementById('switch-public-wrap');
