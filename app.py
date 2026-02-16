@@ -57,8 +57,11 @@ def read_data_file():
 
 
 def write_data_file(obj):
-    with open(DATA_JSON_PATH, "w", encoding="utf-8") as f:
+    """เขียนแบบ atomic (เขียนไฟล์ชั่วคราวแล้ว rename) เพื่อกันไฟล์เสียเมื่อมี save พร้อมกัน"""
+    tmp = DATA_JSON_PATH.with_suffix(".json.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(obj, f, ensure_ascii=False, indent=2)
+    tmp.replace(DATA_JSON_PATH)
 
 
 def ensure_data_and_image():

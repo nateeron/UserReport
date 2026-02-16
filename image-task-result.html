@@ -44,7 +44,7 @@
     }
     .block {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 24px;
       padding: 20px;
       margin-bottom: 16px;
@@ -79,6 +79,7 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      min-width: 0;
     }
     .col-label {
       font-size: 0.75rem;
@@ -160,6 +161,119 @@
       border-color: #a78bfa;
       background: #2e2e33;
     }
+    .img-box.view-only { cursor: default; }
+    .img-box.view-only.has-image { cursor: zoom-in; }
+    .img-box .img-box-caption {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 8px 10px;
+      background: rgba(0,0,0,0.7);
+      color: #cb8334;
+      border: none;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.8125rem;
+      outline: none;
+      z-index: 2;
+    }
+    .img-box .img-box-caption::placeholder { color: #cb8334; opacity: 0.8; }
+    .img-box .img-box-caption:focus { background: rgba(0,0,0,0.85); }
+    /* แถบรูปย่อใต้ img-box (เมื่อมีรูปเยอะแสดง scroll แนวนอน) */
+    .img-bar {
+      height: 120px;
+      min-height: 120px;
+      min-width: 0;
+      background: #18181b;
+      border: 1px dashed #3f3f46;
+      border-radius: 8px;
+      margin-top: 8px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    .img-bar:hover { border-color: #52525b; }
+    .img-bar.drag-over { border-color: #a78bfa; background: #2e2e33; }
+    .img-bar.uploading { opacity: 0.7; pointer-events: none; }
+    .img-bar .img-bar-thumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+      flex: 1 1 0;
+      min-width: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 6px;
+      cursor: grab;
+      user-select: none;
+    }
+    .img-bar .img-bar-thumbs:active { cursor: grabbing; }
+    .img-bar.img-bar-drag-scroll .img-bar-thumbs { cursor: grabbing; }
+    .img-bar .img-bar-thumbs::-webkit-scrollbar { height: 8px; }
+    .img-bar .img-bar-thumbs::-webkit-scrollbar-track { background: #27272a; border-radius: 4px; }
+    .img-bar .img-bar-thumbs::-webkit-scrollbar-thumb { background: #52525b; border-radius: 4px; }
+    .img-bar .img-bar-thumbs::-webkit-scrollbar-thumb:hover { background: #71717a; }
+    .img-bar .img-bar-thumb {
+      width: 100px;
+      height: 100px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid #3f3f46;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f11;
+      position: relative;
+    }
+    .img-bar .img-bar-thumb:hover { border-color: #71717a; }
+    .img-bar .img-bar-thumb.selected { border-color: #3b82f6; box-shadow: 0 0 0 2px #3b82f6; }
+    .img-bar .img-bar-thumb img { width: 100%; height: 100%; object-fit: contain; }
+    .img-bar .img-bar-thumb .btn-bar-thumb-delete {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.75);
+      color: #f4f4f5;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .img-bar .img-bar-thumb:hover .btn-bar-thumb-delete { opacity: 1; }
+    .img-bar .img-bar-thumb .btn-bar-thumb-delete:hover { background: #dc2626; color: #fff; }
+    .img-bar .btn-bar-upload {
+      width: 100px;
+      height: 100px;
+      flex-shrink: 0;
+      border: 2px dashed #52525b;
+      border-radius: 8px;
+      background: #252529;
+      color: #71717a;
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .img-bar .btn-bar-upload:hover { border-color: #71717a; color: #a1a1aa; background: #2a2a2e; }
+    .img-bar .btn-bar-upload span:first-child { font-size: 1.5rem; }
+    .img-bar input[type="file"] { display: none; }
     /* Edit image dialog */
     #edit-image-dialog {
       display: none;
@@ -797,10 +911,14 @@
       <button type="button" class="btn-delete-task" title="Delete task">Delete task</button>
       <div class="col">
         <span class="col-label">Image Task</span>
-        <div class="img-box" data-role="task-img" data-side="task" title="Click or drag & drop to upload">
-          <input type="file" accept="image/*">
-          <span class="placeholder-text">imagetask (click to upload)</span>
-          <span class="upload-hint">📷</span>
+        <div class="img-box view-only" data-role="task-img" data-side="task" title="Display">
+          <span class="placeholder-text">imagetask</span>
+          <input type="text" class="img-box-caption" placeholder="index #1" maxlength="500" data-role="task-caption">
+        </div>
+        <div class="img-bar" data-role="task-img-bar" data-side="task">
+          <div class="img-bar-thumbs"></div>
+          <button type="button" class="btn-bar-upload"><span>📤</span><span>Upload</span></button>
+          <input type="file" accept="image/*" multiple>
         </div>
         <div class="comments" data-role="task-comments">
           <div class="comment-feed"></div>
@@ -812,10 +930,14 @@
       </div>
       <div class="col">
         <span class="col-label">Image Result</span>
-        <div class="img-box" data-role="result-img" data-side="result" title="Click or drag & drop to upload">
-          <input type="file" accept="image/*">
-          <span class="placeholder-text">image result (click to upload)</span>
-          <span class="upload-hint">📷</span>
+        <div class="img-box view-only" data-role="result-img" data-side="result" title="Display">
+          <span class="placeholder-text">image result</span>
+          <input type="text" class="img-box-caption" placeholder="index #2" maxlength="500" data-role="result-caption">
+        </div>
+        <div class="img-bar" data-role="result-img-bar" data-side="result">
+          <div class="img-bar-thumbs"></div>
+          <button type="button" class="btn-bar-upload"><span>📤</span><span>Upload</span></button>
+          <input type="file" accept="image/*" multiple>
         </div>
         <div class="comments" data-role="result-comments">
           <div class="comment-feed"></div>
@@ -834,10 +956,14 @@
       <button type="button" class="btn-delete-task" title="Delete task">Delete task</button>
       <div class="col">
         <span class="col-label">Image Task</span>
-        <div class="img-box" data-role="task-img" data-side="task" title="Click or drag & drop to upload">
-          <input type="file" accept="image/*">
-          <span class="placeholder-text">imagetask (click to upload)</span>
-          <span class="upload-hint">📷</span>
+        <div class="img-box view-only" data-role="task-img" data-side="task" title="Display">
+          <span class="placeholder-text">imagetask</span>
+          <input type="text" class="img-box-caption" placeholder="index #3" maxlength="500" data-role="task-caption">
+        </div>
+        <div class="img-bar" data-role="task-img-bar" data-side="task">
+          <div class="img-bar-thumbs"></div>
+          <button type="button" class="btn-bar-upload"><span>📤</span><span>Upload</span></button>
+          <input type="file" accept="image/*" multiple>
         </div>
         <div class="comments" data-role="task-comments">
           <div class="comment-feed"></div>
@@ -849,10 +975,14 @@
       </div>
       <div class="col">
         <span class="col-label">Image Result</span>
-        <div class="img-box" data-role="result-img" data-side="result" title="Click or drag & drop to upload">
-          <input type="file" accept="image/*">
-          <span class="placeholder-text">image result (click to upload)</span>
-          <span class="upload-hint">📷</span>
+        <div class="img-box view-only" data-role="result-img" data-side="result" title="Display">
+          <span class="placeholder-text">image result</span>
+          <input type="text" class="img-box-caption" placeholder="index #4" maxlength="500" data-role="result-caption">
+        </div>
+        <div class="img-bar" data-role="result-img-bar" data-side="result">
+          <div class="img-bar-thumbs"></div>
+          <button type="button" class="btn-bar-upload"><span>📤</span><span>Upload</span></button>
+          <input type="file" accept="image/*" multiple>
         </div>
         <div class="comments" data-role="result-comments">
           <div class="comment-feed"></div>
@@ -954,32 +1084,71 @@
       return path + '/api/save';
     }
 
+    var _saveDebounceTimer = null;
+    var _saveDebounceMs = 600;
     function updateDataJsonOnServer() {
-      var data;
-      try {
-        data = collectData();
-      } catch (err) {
-        console.warn('collectData failed:', err);
-        showSaveStatus('error');
-        return;
-      }
-      var url = getUpdateDataUrl();
-      fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-        .then(function (r) {
-          if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
-          return r.json();
-        })
-        .then(function (res) {
-          showSaveStatus('ok', res && res.dataJsonUpdated);
-        })
-        .catch(function (err) {
-          console.warn('Update data.json failed:', err);
+      clearTimeout(_saveDebounceTimer);
+      _saveDebounceTimer = setTimeout(function doSave() {
+        _saveDebounceTimer = null;
+        var data;
+        try {
+          data = collectData();
+        } catch (err) {
+          console.warn('collectData failed:', err);
           showSaveStatus('error');
-        });
+          return;
+        }
+        var url = getUpdateDataUrl();
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        })
+          .then(function (r) {
+            if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+            return r.json();
+          })
+          .then(function (res) {
+            showSaveStatus('ok', res && res.dataJsonUpdated);
+          })
+          .catch(function (err) {
+            console.warn('Update data.json failed:', err);
+            showSaveStatus('error');
+          });
+      }, _saveDebounceMs);
+    }
+
+    var _imgBarScrollBar = null;
+    var _imgBarScrollStartX = 0;
+    var _imgBarScrollDownX = 0;
+    var _imgBarScrollDownY = 0;
+    var _imgBarScrollDragStarted = false;
+    var _imgBarScrollThreshold = 5;
+    function _imgBarScrollMove(e) {
+      if (!_imgBarScrollBar) return;
+      var thumbs = _imgBarScrollBar.querySelector('.img-bar-thumbs');
+      if (!thumbs) return;
+      if (!_imgBarScrollDragStarted) {
+        if (Math.abs(e.clientX - _imgBarScrollDownX) > _imgBarScrollThreshold ||
+            Math.abs(e.clientY - _imgBarScrollDownY) > _imgBarScrollThreshold) {
+          _imgBarScrollDragStarted = true;
+          _imgBarScrollBar.classList.add('img-bar-drag-scroll');
+          _imgBarScrollStartX = e.clientX;
+        } else return;
+      }
+      var dx = e.clientX - _imgBarScrollStartX;
+      _imgBarScrollStartX = e.clientX;
+      thumbs.scrollLeft -= dx;
+    }
+    function _imgBarScrollEnd() {
+      if (_imgBarScrollBar) {
+        _imgBarScrollBar.classList.remove('img-bar-drag-scroll');
+        if (_imgBarScrollDragStarted) _imgBarScrollBar._scrollDragJustEnded = true;
+      }
+      _imgBarScrollBar = null;
+      _imgBarScrollDragStarted = false;
+      document.removeEventListener('mousemove', _imgBarScrollMove);
+      document.removeEventListener('mouseup', _imgBarScrollEnd);
     }
 
     function showSaveStatus(status, dataJsonUpdated) {
@@ -1000,12 +1169,146 @@
       el._hide = setTimeout(function () { el.style.opacity = '0'; }, 2500);
     }
 
+    function getBarForBox(imgBox) {
+      var next = imgBox && imgBox.nextElementSibling;
+      return (next && next.classList && next.classList.contains('img-bar')) ? next : null;
+    }
+    function getBoxForBar(bar) {
+      var prev = bar && bar.previousElementSibling;
+      return (prev && prev.classList && prev.classList.contains('img-box')) ? prev : null;
+    }
+
     function getImgBoxFilename(imgBox) {
+      var bar = getBarForBox(imgBox);
+      if (bar) {
+        var thumbs = bar.querySelectorAll('.img-bar-thumb');
+        var idx = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+        var thumb = thumbs[idx] || thumbs[0];
+        if (thumb) return thumb.getAttribute('data-filename') || null;
+        return null;
+      }
       return imgBox.getAttribute('data-filename') || null;
     }
 
     function getImgBoxKey(imgBox) {
+      var bar = getBarForBox(imgBox);
+      if (bar) {
+        var first = bar.querySelector('.img-bar-thumb');
+        if (first) return first.getAttribute('data-key') || null;
+      }
       return imgBox.getAttribute('data-image-key') || null;
+    }
+
+    function getBarImageKeys(bar) {
+      var thumbs = bar.querySelectorAll('.img-bar-thumb');
+      return Array.from(thumbs).map(function (t) { return t.getAttribute('data-key'); }).filter(Boolean);
+    }
+
+    function setBarSelectedIndex(bar, index) {
+      if (!bar) return;
+      bar.setAttribute('data-selected-index', String(index));
+      bar.querySelectorAll('.img-bar-thumb').forEach(function (t, i) { t.classList.toggle('selected', i === index); });
+    }
+
+    function clearBoxToPlaceholder(box) {
+      var img = box.querySelector('img');
+      if (img) {
+        if (img.dataset.blobUrl) try { URL.revokeObjectURL(img.dataset.blobUrl); } catch (_) {}
+        img.remove();
+      }
+      var actions = box.querySelector('.img-actions');
+      if (actions) actions.remove();
+      box.classList.remove('has-image');
+      box.removeAttribute('data-filename');
+      box.removeAttribute('data-versionimage');
+      var placeholder = document.createElement('span');
+      placeholder.className = 'placeholder-text';
+      placeholder.textContent = box.getAttribute('data-role') === 'task-img' ? 'imagetask' : 'image result';
+      box.appendChild(placeholder);
+    }
+
+    function syncBoxFromBar(box, bar) {
+      if (!box || !bar) return;
+      var thumbs = bar.querySelectorAll('.img-bar-thumb');
+      var idx = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+      var thumb = thumbs[idx] || thumbs[0];
+      if (!thumb) {
+        clearBoxToPlaceholder(box);
+        return;
+      }
+      var filename = thumb.getAttribute('data-filename');
+      var src = thumb.querySelector('img') && thumb.querySelector('img').src;
+      if (!src && filename) {
+        var bases = getDataAndImageBase();
+        var imageBase = bases.imageBase;
+        if (imageBase.length && imageBase.charAt(imageBase.length - 1) !== '/') imageBase += '/';
+        src = imageBase + filename;
+      }
+      if (!src) return;
+      var span = box.querySelector('.placeholder-text');
+      if (span) span.remove();
+      var img = box.querySelector('img');
+      if (!img) { img = document.createElement('img'); box.appendChild(img); }
+      img.removeAttribute('data-blobUrl');
+      img.src = src;
+      if (thumb.querySelector('img').dataset.blobUrl) img.dataset.blobUrl = thumb.querySelector('img').dataset.blobUrl;
+      if (filename) box.setAttribute('data-filename', filename);
+      box.classList.add('has-image');
+      addImageActions(box);
+    }
+
+    function addBarThumb(bar, key, filename, previewUrl) {
+      var bases = getDataAndImageBase();
+      var imageBase = bases.imageBase;
+      if (imageBase.length && imageBase.charAt(imageBase.length - 1) !== '/') imageBase += '/';
+      var src = previewUrl || (imageBase + filename);
+      var container = bar.querySelector('.img-bar-thumbs');
+      if (!container) return;
+      var thumb = document.createElement('div');
+      thumb.className = 'img-bar-thumb';
+      thumb.setAttribute('data-key', key);
+      thumb.setAttribute('data-filename', filename);
+      var im = document.createElement('img');
+      im.src = src;
+      if (previewUrl) im.dataset.blobUrl = previewUrl;
+      thumb.appendChild(im);
+      var btnDel = document.createElement('button');
+      btnDel.type = 'button';
+      btnDel.className = 'btn-bar-thumb-delete';
+      btnDel.title = 'Delete';
+      btnDel.innerHTML = '&#10005;';
+      thumb.appendChild(btnDel);
+      container.appendChild(thumb);
+      if (!bar.hasAttribute('data-selected-index')) setBarSelectedIndex(bar, 0);
+    }
+
+    function removeImageFromBar(bar, index) {
+      if (!bar) return;
+      var thumbs = bar.querySelectorAll('.img-bar-thumb');
+      var thumb = thumbs[index];
+      if (!thumb) return;
+      var im = thumb.querySelector('img');
+      if (im && im.dataset.blobUrl) try { URL.revokeObjectURL(im.dataset.blobUrl); } catch (_) {}
+      thumb.remove();
+      var box = getBoxForBar(bar);
+      var newThumbs = bar.querySelectorAll('.img-bar-thumb');
+      var sel = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+      if (sel >= newThumbs.length) sel = Math.max(0, newThumbs.length - 1);
+      setBarSelectedIndex(bar, newThumbs.length ? sel : 0);
+      if (box) syncBoxFromBar(box, bar);
+      updateDataJsonOnServer();
+    }
+
+    function getCaptionIndex(blockIndex, side) { return blockIndex * 2 + (side === 'task' ? 1 : 2); }
+    function getImgBoxDescription(imgBox, blockIndex, side) {
+      if (!imgBox) return 'index #' + getCaptionIndex(blockIndex, side);
+      var input = imgBox.querySelector('.img-box-caption');
+      var val = input ? input.value.trim() : '';
+      return val || ('index #' + getCaptionIndex(blockIndex, side));
+    }
+    function setImgBoxDescription(imgBox, text) {
+      var input = imgBox && imgBox.querySelector('.img-box-caption');
+      if (input) input.value = text || '';
     }
 
     function getCommentsData(commentsEl) {
@@ -1030,10 +1333,14 @@
         '<button type="button" class="btn-delete-task" title="Delete task">Delete task</button>' +
         '<div class="col">' +
           '<span class="col-label">Image Task</span>' +
-          '<div class="img-box" data-role="task-img" data-side="task" title="Click or drag & drop to upload">' +
-            '<input type="file" accept="image/*">' +
-            '<span class="placeholder-text">imagetask (click to upload)</span>' +
-            '<span class="upload-hint">📷</span>' +
+          '<div class="img-box view-only" data-role="task-img" data-side="task" title="Display">' +
+            '<span class="placeholder-text">imagetask</span>' +
+            '<input type="text" class="img-box-caption" placeholder="index #' + (index * 2 + 1) + '" maxlength="500" data-role="task-caption">' +
+          '</div>' +
+          '<div class="img-bar" data-role="task-img-bar" data-side="task">' +
+            '<div class="img-bar-thumbs"></div>' +
+            '<button type="button" class="btn-bar-upload"><span>📤</span><span>Upload</span></button>' +
+            '<input type="file" accept="image/*" multiple>' +
           '</div>' +
           '<div class="comments" data-role="task-comments">' +
             '<div class="comment-feed"></div>' +
@@ -1042,10 +1349,14 @@
         '</div>' +
         '<div class="col">' +
           '<span class="col-label">Image Result</span>' +
-          '<div class="img-box" data-role="result-img" data-side="result" title="Click or drag & drop to upload">' +
-            '<input type="file" accept="image/*">' +
-            '<span class="placeholder-text">image result (click to upload)</span>' +
-            '<span class="upload-hint">📷</span>' +
+          '<div class="img-box view-only" data-role="result-img" data-side="result" title="Display">' +
+            '<span class="placeholder-text">image result</span>' +
+            '<input type="text" class="img-box-caption" placeholder="index #' + (index * 2 + 2) + '" maxlength="500" data-role="result-caption">' +
+          '</div>' +
+          '<div class="img-bar" data-role="result-img-bar" data-side="result">' +
+            '<div class="img-bar-thumbs"></div>' +
+            '<button type="button" class="btn-bar-upload"><span>📤</span><span>Upload</span></button>' +
+            '<input type="file" accept="image/*" multiple>' +
           '</div>' +
           '<div class="comments" data-role="result-comments">' +
             '<div class="comment-feed"></div>' +
@@ -1121,14 +1432,36 @@
         container.insertBefore(block, newTaskRow);
         var taskImgBox = block.querySelector('[data-role="task-img"]');
         var resultImgBox = block.querySelector('[data-role="result-img"]');
+        var taskBar = getBarForBox(taskImgBox);
+        var resultBar = getBarForBox(resultImgBox);
         var taskCommentsEl = block.querySelector('[data-role="task-comments"]');
         var resultCommentsEl = block.querySelector('[data-role="result-comments"]');
-        var taskKey = tasks[i].taskImage;
-        var resultKey = tasks[i].resultImage;
-        var taskFilename = imageIndex[taskKey];
-        var resultFilename = imageIndex[resultKey];
-        if (taskImgBox && taskFilename) setBoxImageFromUrl(taskImgBox, imageBase + taskFilename, taskFilename);
-        if (resultImgBox && resultFilename) setBoxImageFromUrl(resultImgBox, imageBase + resultFilename, resultFilename);
+        var taskKeys = tasks[i].taskImageKeys || (tasks[i].taskImage ? [tasks[i].taskImage] : []);
+        var resultKeys = tasks[i].resultImageKeys || (tasks[i].resultImage ? [tasks[i].resultImage] : []);
+        if (taskBar && taskKeys.length) {
+          taskKeys.forEach(function (k) {
+            var fn = imageIndex[k];
+            if (fn) addBarThumb(taskBar, k, fn, null);
+          });
+          taskBar.setAttribute('data-next-index', String(taskKeys.length));
+          setBarSelectedIndex(taskBar, 0);
+          if (taskImgBox) syncBoxFromBar(taskImgBox, taskBar);
+        } else if (taskImgBox && imageIndex[tasks[i].taskImage]) {
+          setBoxImageFromUrl(taskImgBox, imageBase + imageIndex[tasks[i].taskImage], imageIndex[tasks[i].taskImage]);
+        }
+        if (resultBar && resultKeys.length) {
+          resultKeys.forEach(function (k) {
+            var fn = imageIndex[k];
+            if (fn) addBarThumb(resultBar, k, fn, null);
+          });
+          resultBar.setAttribute('data-next-index', String(resultKeys.length));
+          setBarSelectedIndex(resultBar, 0);
+          if (resultImgBox) syncBoxFromBar(resultImgBox, resultBar);
+        } else         if (resultImgBox && imageIndex[tasks[i].resultImage]) {
+          setBoxImageFromUrl(resultImgBox, imageBase + imageIndex[tasks[i].resultImage], imageIndex[tasks[i].resultImage]);
+        }
+        setImgBoxDescription(taskImgBox, tasks[i].taskDescription);
+        setImgBoxDescription(resultImgBox, tasks[i].resultDescription);
         if (taskCommentsEl && tasks[i].taskComments && tasks[i].taskComments.length) {
           tasks[i].taskComments.forEach(function (c) {
             postCommentWithTime(taskCommentsEl, c.comment, c.datetime);
@@ -1197,6 +1530,12 @@
     }
 
     function removeImage(box) {
+      var bar = getBarForBox(box);
+      if (bar) {
+        var idx = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+        removeImageFromBar(bar, idx);
+        return;
+      }
       var img = box.querySelector('img');
       if (img) {
         if (img.dataset.blobUrl) try { URL.revokeObjectURL(img.dataset.blobUrl); } catch (_) {}
@@ -1209,12 +1548,8 @@
       box.removeAttribute('data-versionimage');
       var placeholder = document.createElement('span');
       placeholder.className = 'placeholder-text';
-      placeholder.textContent = box.getAttribute('data-role') === 'task-img' ? 'imagetask (click to upload)' : 'image result (click to upload)';
-      var hint = document.createElement('span');
-      hint.className = 'upload-hint';
-      hint.textContent = '📷';
+      placeholder.textContent = box.getAttribute('data-role') === 'task-img' ? 'imagetask' : 'image result';
       box.appendChild(placeholder);
-      box.appendChild(hint);
       var input = box.querySelector('input[type="file"]');
       if (input) input.value = '';
       updateDataJsonOnServer();
@@ -1321,6 +1656,11 @@
     }
 
     function uploadImage(file, box, blockIndex, side) {
+      var bar = getBarForBox(box);
+      if (bar) {
+        uploadImageToBar(file, bar, blockIndex, side);
+        return;
+      }
       const key = side + '_' + blockIndex;
       box.setAttribute('data-image-key', key);
       const form = new FormData();
@@ -1358,6 +1698,38 @@
         });
     }
 
+    function uploadImageToBar(file, bar, blockIndex, side) {
+      if (!file || !file.type.startsWith('image/')) return;
+      var baseKey = side + '_' + blockIndex;
+      var nextIdx = parseInt(bar.getAttribute('data-next-index') || '0', 10);
+      var key = nextIdx === 0 ? baseKey : baseKey + '_' + nextIdx;
+      bar.setAttribute('data-next-index', String(nextIdx + 1));
+      var form = new FormData();
+      form.append('image', file);
+      bar.classList.add('uploading');
+      fetch(UPLOAD_URL, { method: 'POST', body: form })
+        .then(function (r) {
+          if (!r.ok) throw new Error('Upload failed');
+          return r.json();
+        })
+        .then(function (data) {
+          var filename = data.filename;
+          bar.classList.remove('uploading');
+          var previewUrl = URL.createObjectURL(file);
+          addBarThumb(bar, key, filename, previewUrl);
+          var box = getBoxForBar(bar);
+          if (box && nextIdx === 0) {
+            setBarSelectedIndex(bar, 0);
+            syncBoxFromBar(box, bar);
+          }
+          updateDataJsonOnServer();
+        })
+        .catch(function (err) {
+          bar.classList.remove('uploading');
+          alert('Upload failed: ' + (err.message || err));
+        });
+    }
+
     function bindCommentForm(form) {
       var commentsEl = form.closest('.comments');
       var input = form.querySelector('input');
@@ -1378,65 +1750,148 @@
         ? block.getAttribute('data-block') : String(document.querySelectorAll('#blocks .block').length - 1);
       block.querySelectorAll('.comment-form').forEach(bindCommentForm);
       block.querySelectorAll('.img-box').forEach(function (box) {
-        const input = box.querySelector('input[type="file"]');
-        if (!input) return;
-        const side = box.getAttribute('data-role') === 'task-img' ? 'task' : 'result';
-        if (!box.getAttribute('data-image-key')) {
-          box.setAttribute('data-image-key', side + '_' + blockIndex);
+        if (box.classList.contains('view-only')) {
+          box.addEventListener('click', function (e) {
+            if (e.target.closest('.img-actions')) return;
+            if (e.target.closest('.img-box-caption')) return;
+            if (e.target.tagName === 'IMG') { openLightbox(e.target.src); }
+          });
+          box.querySelectorAll('.img-box-caption').forEach(function (input) {
+            input.addEventListener('click', function (e) { e.stopPropagation(); });
+            input.addEventListener('blur', function () { updateDataJsonOnServer(); });
+          });
+          return;
         }
+        var input = box.querySelector('input[type="file"]');
+        if (!input) return;
+        var side = box.getAttribute('data-role') === 'task-img' ? 'task' : 'result';
+        if (!box.getAttribute('data-image-key')) box.setAttribute('data-image-key', side + '_' + blockIndex);
         box.addEventListener('click', function (e) {
           if (e.target === input) return;
           if (e.target.closest('.img-actions')) return;
-          if (e.target.tagName === 'IMG') {
-            openLightbox(e.target.src);
-            return;
-          }
+          if (e.target.tagName === 'IMG') { openLightbox(e.target.src); return; }
           input.click();
         });
         input.addEventListener('change', function () {
-          const file = input.files && input.files[0];
+          var file = input.files && input.files[0];
           if (!file || !file.type.startsWith('image/')) return;
           uploadImage(file, box, blockIndex, side);
         });
-        box.addEventListener('dragover', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          if (e.dataTransfer.types.indexOf('Files') >= 0) box.classList.add('drag-over');
-        });
-        box.addEventListener('dragleave', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          if (!box.contains(e.relatedTarget)) box.classList.remove('drag-over');
-        });
+        box.addEventListener('dragover', function (e) { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer.types.indexOf('Files') >= 0) box.classList.add('drag-over'); });
+        box.addEventListener('dragleave', function (e) { e.preventDefault(); e.stopPropagation(); if (!box.contains(e.relatedTarget)) box.classList.remove('drag-over'); });
         box.addEventListener('drop', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          box.classList.remove('drag-over');
-          const file = e.dataTransfer.files && e.dataTransfer.files[0];
+          e.preventDefault(); e.stopPropagation(); box.classList.remove('drag-over');
+          var file = e.dataTransfer.files && e.dataTransfer.files[0];
           if (!file || !file.type.startsWith('image/')) return;
           uploadImage(file, box, blockIndex, side);
+        });
+      });
+      block.querySelectorAll('.img-bar').forEach(function (bar) {
+        var box = getBoxForBar(bar);
+        var side = bar.getAttribute('data-side') || (bar.getAttribute('data-role') === 'task-img-bar' ? 'task' : 'result');
+        var input = bar.querySelector('input[type="file"]');
+        var btn = bar.querySelector('.btn-bar-upload');
+        if (btn && input) btn.addEventListener('click', function () { input.click(); });
+        if (input) input.addEventListener('change', function () {
+          var files = input.files;
+          if (!files || !files.length) return;
+          for (var i = 0; i < files.length; i++) {
+            if (files[i].type.startsWith('image/')) uploadImageToBar(files[i], bar, blockIndex, side);
+          }
+          input.value = '';
+        });
+        bar.addEventListener('dragover', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          if (e.dataTransfer.types.indexOf('Files') >= 0) bar.classList.add('drag-over');
+        });
+        bar.addEventListener('dragleave', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          if (!bar.contains(e.relatedTarget)) bar.classList.remove('drag-over');
+        });
+        bar.addEventListener('drop', function (e) {
+          e.preventDefault(); e.stopPropagation(); bar.classList.remove('drag-over');
+          var files = e.dataTransfer.files;
+          if (!files || !files.length) return;
+          for (var i = 0; i < files.length; i++) {
+            if (files[i].type.startsWith('image/')) uploadImageToBar(files[i], bar, blockIndex, side);
+          }
+        });
+        var thumbsEl = bar.querySelector('.img-bar-thumbs');
+        if (thumbsEl) {
+          thumbsEl.addEventListener('mousedown', function (e) {
+            if (e.button !== 0) return;
+            if (e.target.closest('button')) return;
+            e.preventDefault();
+            _imgBarScrollBar = bar;
+            _imgBarScrollDownX = e.clientX;
+            _imgBarScrollDownY = e.clientY;
+            _imgBarScrollDragStarted = false;
+            document.addEventListener('mousemove', _imgBarScrollMove);
+            document.addEventListener('mouseup', _imgBarScrollEnd);
+          });
+        }
+        bar.addEventListener('click', function (e) {
+          if (bar._scrollDragJustEnded) { bar._scrollDragJustEnded = false; return; }
+          if (e.target.closest('.btn-bar-thumb-delete')) {
+            e.preventDefault();
+            e.stopPropagation();
+            var thumb = e.target.closest('.img-bar-thumb');
+            if (thumb) {
+              var thumbs = bar.querySelectorAll('.img-bar-thumb');
+              var idx = Array.from(thumbs).indexOf(thumb);
+              if (idx >= 0) removeImageFromBar(bar, idx);
+            }
+            return;
+          }
+          var thumb = e.target.closest('.img-bar-thumb');
+          if (!thumb || !box) return;
+          var thumbs = bar.querySelectorAll('.img-bar-thumb');
+          var idx = Array.from(thumbs).indexOf(thumb);
+          if (idx >= 0) { setBarSelectedIndex(bar, idx); syncBoxFromBar(box, bar); }
         });
       });
     }
 
     function collectData() {
-      const blocks = document.querySelectorAll('#blocks .block');
-      const imageIndex = {};
-      const tasks = [];
+      var blocks = document.querySelectorAll('#blocks .block');
+      var imageIndex = {};
+      var tasks = [];
       blocks.forEach(function (block, i) {
-        const taskImgBox = block.querySelector('[data-role="task-img"]');
-        const resultImgBox = block.querySelector('[data-role="result-img"]');
-        const taskComments = block.querySelector('[data-role="task-comments"]');
-        const resultComments = block.querySelector('[data-role="result-comments"]');
-        var taskKey = 'task_' + i;
-        var resultKey = 'result_' + i;
-        var taskFilename = taskImgBox ? getImgBoxFilename(taskImgBox) : null;
-        var resultFilename = resultImgBox ? getImgBoxFilename(resultImgBox) : null;
-        if (taskFilename) imageIndex[taskKey] = taskFilename;
-        if (resultFilename) imageIndex[resultKey] = resultFilename;
+        var taskImgBox = block.querySelector('[data-role="task-img"]');
+        var resultImgBox = block.querySelector('[data-role="result-img"]');
+        var taskBar = getBarForBox(taskImgBox);
+        var resultBar = getBarForBox(resultImgBox);
+        var taskComments = block.querySelector('[data-role="task-comments"]');
+        var resultComments = block.querySelector('[data-role="result-comments"]');
+        var taskKeys = taskBar ? getBarImageKeys(taskBar) : [];
+        var resultKeys = resultBar ? getBarImageKeys(resultBar) : [];
+        var taskKey = taskKeys[0] || ('task_' + i);
+        var resultKey = resultKeys[0] || ('result_' + i);
+        if (taskBar) {
+          taskBar.querySelectorAll('.img-bar-thumb').forEach(function (t) {
+            var k = t.getAttribute('data-key');
+            var f = t.getAttribute('data-filename');
+            if (k && f) imageIndex[k] = f;
+          });
+        } else if (taskImgBox && getImgBoxFilename(taskImgBox)) {
+          imageIndex[taskKey] = getImgBoxFilename(taskImgBox);
+        }
+        if (resultBar) {
+          resultBar.querySelectorAll('.img-bar-thumb').forEach(function (t) {
+            var k = t.getAttribute('data-key');
+            var f = t.getAttribute('data-filename');
+            if (k && f) imageIndex[k] = f;
+          });
+        } else if (resultImgBox && getImgBoxFilename(resultImgBox)) {
+          imageIndex[resultKey] = getImgBoxFilename(resultImgBox);
+        }
         tasks.push({
           taskImage: taskKey,
           resultImage: resultKey,
+          taskImageKeys: taskKeys.length ? taskKeys : undefined,
+          resultImageKeys: resultKeys.length ? resultKeys : undefined,
+          taskDescription: getImgBoxDescription(taskImgBox, i, 'task'),
+          resultDescription: getImgBoxDescription(resultImgBox, i, 'result'),
           taskComments: taskComments ? getCommentsData(taskComments) : [],
           resultComments: resultComments ? getCommentsData(resultComments) : []
         });
@@ -1577,7 +2032,16 @@
       }
       if (box && e.target.closest('.btn-replace-img')) {
         e.preventDefault();
-        box.querySelector('input[type="file"]').click();
+        var bar = getBarForBox(box);
+        var input;
+        if (bar) {
+          var idx = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+          removeImageFromBar(bar, idx);
+          input = bar.querySelector('input[type="file"]');
+        } else {
+          input = box.querySelector('input[type="file"]');
+        }
+        if (input) input.click();
         return;
       }
       if (btn && btn.classList.contains('btn-delete-task')) {
