@@ -408,6 +408,9 @@
         <button type="button" id="tool-arrow" title="Arrow" value="arrow">➤</button>
         <button type="button" id="tool-line" title="เส้นตรง" value="line">—</button>
         <button type="button" id="tool-box" title="Box" value="box">▢</button>
+        <button type="button" id="tool-boxfilled" title="Box สีทึบ" value="boxfilled">■</button>
+        <button type="button" id="tool-arrow-double" title="ลูกศร 2 หัว" value="arrow-double">⇄</button>
+        <button type="button" id="tool-curve" title="เส้น โค้ง A ไป B มีหัวลูกศร ดึงจุดกึ่งกลางดัดโค้งได้" value="curve">⌒</button>
         <button type="button" id="tool-highlight" title="Highlight" value="highlight">▣</button>
         <button type="button" id="tool-text" title="Text" value="text">T</button>
         <button type="button" id="tool-label" title="ป้ายเลขลำดับ (วงกลม 1,2,3...)" value="label">①</button>
@@ -739,6 +742,56 @@ function drawShape(s, opts) {
     ctx.fillStyle = hexToRgba(cBg, 0.25); ctx.strokeStyle = hexToRgba(c, 0.9);
     ctx.lineWidth = lw; ctx.setLineDash(dash);
     ctx.fillRect(s.x, s.y, s.w, s.h); ctx.strokeRect(s.x, s.y, s.w, s.h);
+  } else if (s.type === 'boxfilled') {
+    ctx.fillStyle = cBg; ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.setLineDash(dash);
+    ctx.fillRect(s.x, s.y, s.w, s.h); ctx.strokeRect(s.x, s.y, s.w, s.h);
+  } else if (s.type === 'arrow-double') {
+    const from = s.from, to = s.to;
+    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+    const ah = headLen(lw);
+    const inset = 0.75;
+    const baseFromX = from.x + ah * inset * Math.cos(angle);
+    const baseFromY = from.y + ah * inset * Math.sin(angle);
+    const baseToX = to.x - ah * inset * Math.cos(angle);
+    const baseToY = to.y - ah * inset * Math.sin(angle);
+    ctx.strokeStyle = c; ctx.fillStyle = c;
+    ctx.lineWidth = Math.max(2, lw);
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    ctx.moveTo(baseFromX, baseFromY);
+    ctx.lineTo(baseToX, baseToY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    [ { tip: from, angle: angle + Math.PI }, { tip: to, angle: angle } ].forEach(function (head) {
+      const tipX = head.tip.x, tipY = head.tip.y;
+      const a = head.angle;
+      ctx.beginPath();
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(tipX - ah*Math.cos(a-Math.PI/6), tipY - ah*Math.sin(a-Math.PI/6));
+      ctx.lineTo(tipX - ah*Math.cos(a+Math.PI/6), tipY - ah*Math.sin(a+Math.PI/6));
+      ctx.closePath();
+      ctx.fill();
+    });
+  } else if (s.type === 'curve') {
+    const from = s.from, to = s.to;
+    const { cpX, cpY } = getCurveCP(s);
+    ctx.strokeStyle = c; ctx.fillStyle = c;
+    ctx.lineWidth = Math.max(2, lw);
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.quadraticCurveTo(cpX, cpY, to.x, to.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const angle = Math.atan2(to.y - cpY, to.x - cpX);
+    const ah = headLen(lw);
+    const tipX = to.x, tipY = to.y;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(tipX - ah*Math.cos(angle-Math.PI/6), tipY - ah*Math.sin(angle-Math.PI/6));
+    ctx.lineTo(tipX - ah*Math.cos(angle+Math.PI/6), tipY - ah*Math.sin(angle+Math.PI/6));
+    ctx.closePath();
+    ctx.fill();
   } else if (s.type === 'text') {
     const fs = s.fontSize != null ? s.fontSize : fontSizePx;
     const borderStyle = s.borderStyle || 'none';
@@ -847,6 +900,31 @@ function hitArrow(p, from, to) {
   const proj = { x: from.x + u*dx, y: from.y + u*dy };
   return Math.hypot(p.x - proj.x, p.y - proj.y) <= lineWidth() + 8;
 }
+function curveControl(from, to) {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const midX = (from.x + to.x) / 2, midY = (from.y + to.y) / 2;
+  const perpX = -dy / len, perpY = dx / len;
+  const bulge = len * 0.25;
+  return { cpX: midX + perpX * bulge, cpY: midY + perpY * bulge };
+}
+function getCurveCP(s) {
+  if (s.cp && typeof s.cp.x === 'number' && typeof s.cp.y === 'number') return { cpX: s.cp.x, cpY: s.cp.y };
+  return curveControl(s.from, s.to);
+}
+function hitCurve(p, from, to, threshold, cp) {
+  const t = threshold != null ? threshold : lineWidth() + 8;
+  const cpX = cp && typeof cp.x === 'number' ? cp.x : curveControl(from, to).cpX;
+  const cpY = cp && typeof cp.y === 'number' ? cp.y : curveControl(from, to).cpY;
+  for (let i = 0; i <= 20; i++) {
+    const u = i / 20;
+    const u1 = 1 - u;
+    const x = u1*u1*from.x + 2*u1*u*cpX + u*u*to.x;
+    const y = u1*u1*from.y + 2*u1*u*cpY + u*u*to.y;
+    if (Math.hypot(p.x - x, p.y - y) <= t) return true;
+  }
+  return false;
+}
 function hitRect(p, x, y, w, h) {
   return p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h;
 }
@@ -882,8 +960,10 @@ function hitPencil(p, s) {
 function getShapeAt(p) {
   for (let i = shapes.length - 1; i >= 0; i--) {
     const s = shapes[i];
-    if ((s.type === 'arrow' || s.type === 'line') && hitArrow(p, s.from, s.to)) return i;
+    if ((s.type === 'arrow' || s.type === 'line' || s.type === 'arrow-double') && hitArrow(p, s.from, s.to)) return i;
+    if ((s.type === 'curve') && hitCurve(p, s.from, s.to, undefined, s.cp)) return i;
     if (s.type === 'box' && hitRect(p, s.x, s.y, s.w, s.h)) return i;
+    if (s.type === 'boxfilled' && hitRect(p, s.x, s.y, s.w, s.h)) return i;
     if (s.type === 'highlight' && hitRect(p, s.x, s.y, s.w, s.h)) return i;
     if (s.type === 'text' && hitText(p, s)) return i;
     if (s.type === 'image' && hitRect(p, s.x, s.y, s.w, s.h)) return i;
@@ -901,12 +981,19 @@ function getHandleAt(p) {
   if (selectedIndex < 0) return null;
   const s = shapes[selectedIndex];
   const r = HANDLE_R;
-  if (s.type === 'arrow' || s.type === 'line') {
+  if (s.type === 'curve') {
+    if (Math.hypot(p.x - s.from.x, p.y - s.from.y) <= r) return 0;
+    if (Math.hypot(p.x - s.to.x, p.y - s.to.y) <= r) return 1;
+    const { cpX, cpY } = getCurveCP(s);
+    if (Math.hypot(p.x - cpX, p.y - cpY) <= r) return 2;
+    return null;
+  }
+  if (s.type === 'arrow' || s.type === 'line' || s.type === 'arrow-double') {
     if (Math.hypot(p.x - s.from.x, p.y - s.from.y) <= r) return 0;
     if (Math.hypot(p.x - s.to.x, p.y - s.to.y) <= r) return 1;
     return null;
   }
-  if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+  if (s.type === 'box' || s.type === 'boxfilled' || s.type === 'highlight' || s.type === 'image') {
     const {x, y, w, h} = s;
     const cx = x + w/2, cy = y + h/2;
     const handles = [
@@ -938,10 +1025,15 @@ function drawHandles() {
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 2;
   const r = HANDLE_R;
-  if (s.type === 'arrow' || s.type === 'line') {
+  if (s.type === 'curve') {
     ctx.beginPath(); ctx.arc(s.from.x, s.from.y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.arc(s.to.x, s.to.y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-  } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+    const { cpX, cpY } = getCurveCP(s);
+    ctx.beginPath(); ctx.arc(cpX, cpY, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  } else if (s.type === 'arrow' || s.type === 'line' || s.type === 'arrow-double') {
+    ctx.beginPath(); ctx.arc(s.from.x, s.from.y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(s.to.x, s.to.y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  } else if (s.type === 'box' || s.type === 'boxfilled' || s.type === 'highlight' || s.type === 'image') {
     const {x, y, w, h} = s;
     const cx = x + w/2, cy = y + h/2;
     [[x,y],[cx,y],[x+w,y],[x+w,cy],[x+w,y+h],[cx,y+h],[x,y+h],[x,cy]].forEach(([hx,hy]) => {
@@ -1075,9 +1167,10 @@ function applyCanvasResize(newW, newH, ox, oy) {
     img = im;
     if (ox !== 0 || oy !== 0) {
       shapes.forEach(function (s) {
-        if (s.type === 'arrow' || s.type === 'line') {
+        if (s.type === 'arrow' || s.type === 'line' || s.type === 'arrow-double' || s.type === 'curve') {
           s.from.x += ox; s.from.y += oy; s.to.x += ox; s.to.y += oy;
-        } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+          if (s.type === 'curve' && s.cp) { s.cp.x += ox; s.cp.y += oy; }
+        } else if (s.type === 'box' || s.type === 'boxfilled' || s.type === 'highlight' || s.type === 'image') {
           s.x += ox; s.y += oy;
         } else if (s.type === 'text' || s.type === 'label') {
           s.x += ox; s.y += oy;
@@ -1115,9 +1208,9 @@ function applyCanvasResizeBySize(newW, newH) {
     while (i >= 0) {
       var s = shapes[i];
       var out = false;
-      if (s.type === 'arrow' || s.type === 'line') {
+      if (s.type === 'arrow' || s.type === 'line' || s.type === 'arrow-double' || s.type === 'curve') {
         if (s.from.x < 0 && s.to.x < 0 || s.from.x > newW && s.to.x > newW || s.from.y < 0 && s.to.y < 0 || s.from.y > newH && s.to.y > newH) out = true;
-      } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+      } else if (s.type === 'box' || s.type === 'boxfilled' || s.type === 'highlight' || s.type === 'image') {
         if (s.x + s.w < 0 || s.x > newW || s.y + s.h < 0 || s.y > newH) out = true;
       } else if (s.type === 'text' || s.type === 'pencil') {
         var sx = s.type === 'text' ? s.x : (s.points && s.points[0] ? s.points[0].x : 0);
@@ -1212,15 +1305,24 @@ function applyCrop() {
     var dx = -r.x, dy = -r.y;
     for (var i = shapes.length - 1; i >= 0; i--) {
       var s = shapes[i];
-      if (s.type === 'arrow' || s.type === 'line') {
+      if (s.type === 'arrow' || s.type === 'line' || s.type === 'arrow-double' || s.type === 'curve') {
         s.from.x += dx; s.from.y += dy; s.to.x += dx; s.to.y += dy;
+        if (s.type === 'curve' && s.cp) { s.cp.x += dx; s.cp.y += dy; }
         if (s.from.x < 0 && s.to.x < 0 || s.from.x > newW && s.to.x > newW || s.from.y < 0 && s.to.y < 0 || s.from.y > newH && s.to.y > newH) shapes.splice(i, 1);
-      } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+      } else if (s.type === 'box' || s.type === 'boxfilled' || s.type === 'highlight' || s.type === 'image') {
         s.x += dx; s.y += dy;
         if (s.x + s.w < 0 || s.x > newW || s.y + s.h < 0 || s.y > newH) shapes.splice(i, 1);
       } else if (s.type === 'text') {
         s.x += dx; s.y += dy;
-        if (s.x < -500 || s.x > newW + 500 || s.y < -500 || s.y > newH + 500) shapes.splice(i, 1);
+        if ((s.x < -500 || s.x > newW + 500 || s.y < -500 || s.y > newH + 500)) shapes.splice(i, 1);
+      } else if (s.type === 'label') {
+        s.x += dx; s.y += dy;
+        var lr = Math.max(LABEL_MIN_R, (s.r != null ? s.r : LABEL_DEFAULT_R));
+        if (s.x + lr < 0 || s.x - lr > newW || s.y + lr < 0 || s.y - lr > newH) shapes.splice(i, 1);
+      } else if (s.type === 'pencil' && s.points) {
+        s.points.forEach(function (pt) { pt.x += dx; pt.y += dy; });
+        var out = s.points.every(function (pt) { return pt.x < 0 || pt.x > newW || pt.y < 0 || pt.y > newH; });
+        if (out) shapes.splice(i, 1);
       }
     }
     var afterState = {
@@ -1313,17 +1415,28 @@ function redo() {
 
 function cloneShape(s, offsetX, offsetY) {
   const dx = offsetX || 0, dy = offsetY || 0;
-  if (s.type === 'arrow' || s.type === 'line') {
-    return {
+  if (s.type === 'arrow' || s.type === 'line' || s.type === 'arrow-double' || s.type === 'curve') {
+    const clonedFrom = { x: s.from.x + dx, y: s.from.y + dy };
+    const clonedTo = { x: s.to.x + dx, y: s.to.y + dy };
+    const out = {
       type: s.type,
-      from: { x: s.from.x + dx, y: s.from.y + dy },
-      to: { x: s.to.x + dx, y: s.to.y + dy },
+      from: clonedFrom,
+      to: clonedTo,
       color: s.color,
       lineWidth: s.lineWidth,
       lineType: s.lineType
     };
+    if (s.type === 'curve') {
+      if (s.cp) {
+        out.cp = { x: s.cp.x + dx, y: s.cp.y + dy };
+      } else {
+        var c = curveControl(s.from, s.to);
+        out.cp = { x: c.cpX, y: c.cpY };
+      }
+    }
+    return out;
   }
-  if (s.type === 'box' || s.type === 'highlight') {
+  if (s.type === 'box' || s.type === 'boxfilled' || s.type === 'highlight') {
     return {
       type: s.type,
       x: s.x + dx, y: s.y + dy, w: s.w, h: s.h,
@@ -1394,7 +1507,7 @@ function syncEditPanelFromSelection() {
   document.querySelectorAll('#edit-line-type-group .line-type-btn').forEach(function (b) {
     b.classList.toggle('active', b.value === editLineTypeVal);
   });
-  const isHighlight = s.type === 'highlight';
+  const isHighlight = s.type === 'highlight' || s.type === 'boxfilled';
   const isText = s.type === 'text';
   const isLabel = s.type === 'label';
   document.getElementById('edit-bg-label').style.display = isHighlight ? '' : 'none';
@@ -1446,7 +1559,7 @@ function applyEditToSelected() {
   s.color = document.getElementById('edit-color').value;
   s.lineWidth = parseInt(document.getElementById('edit-line-size').value, 10) || 3;
   var _el = document.querySelector('#edit-line-type-group .line-type-btn.active'); s.lineType = (_el && _el.value) || 'solid';
-  if (s.type === 'highlight') s.colorBg = document.getElementById('edit-color-bg').value;
+  if (s.type === 'highlight' || s.type === 'boxfilled') s.colorBg = document.getElementById('edit-color-bg').value;
   if (s.type === 'text') {
     applyEditTextFontToSelected();
     applyEditTextBorderToSelected();
@@ -1730,9 +1843,9 @@ document.getElementById('resize-apply').addEventListener('click', () => {
     canvas.height = newH;
     img = im;
     shapes.forEach(function (s) {
-      if (s.type === 'arrow' || s.type === 'line') {
+      if (s.type === 'arrow' || s.type === 'line' || s.type === 'arrow-double' || s.type === 'curve') {
         s.from.x *= scale; s.from.y *= scale; s.to.x *= scale; s.to.y *= scale;
-      } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+      } else if (s.type === 'box' || s.type === 'boxfilled' || s.type === 'highlight' || s.type === 'image') {
         s.x *= scale; s.y *= scale; s.w *= scale; s.h *= scale;
       } else if (s.type === 'text') {
         s.x *= scale; s.y *= scale;
@@ -2042,9 +2155,10 @@ canvas.addEventListener('mousemove', (e) => {
     const dx = p.x - start.x, dy = p.y - start.y;
     start = p;
     const s = shapes[selectedIndex];
-    if (s.type === 'arrow' || s.type === 'line') {
+    if (s.type === 'arrow' || s.type === 'line' || s.type === 'arrow-double' || s.type === 'curve') {
       s.from.x += dx; s.from.y += dy; s.to.x += dx; s.to.y += dy;
-    } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+      if (s.type === 'curve' && s.cp) { s.cp.x += dx; s.cp.y += dy; }
+    } else if (s.type === 'box' || s.type === 'boxfilled' || s.type === 'highlight' || s.type === 'image') {
       s.x += dx; s.y += dy;
     } else if (s.type === 'text' || s.type === 'label') {
       s.x += dx; s.y += dy;
@@ -2067,10 +2181,14 @@ canvas.addEventListener('mousemove', (e) => {
       fullRedraw();
       return;
     }
-    if (s.type === 'arrow' || s.type === 'line') {
+    if (s.type === 'curve') {
       if (resizeHandle === 0) { s.from.x = p.x; s.from.y = p.y; }
-          else { s.to.x = p.x; s.to.y = p.y; }
-    } else if (s.type === 'box' || s.type === 'highlight' || s.type === 'image') {
+      else if (resizeHandle === 1) { s.to.x = p.x; s.to.y = p.y; }
+      else if (resizeHandle === 2) { if (!s.cp) s.cp = {}; s.cp.x = p.x; s.cp.y = p.y; }
+    } else if (s.type === 'arrow' || s.type === 'line' || s.type === 'arrow-double') {
+      if (resizeHandle === 0) { s.from.x = p.x; s.from.y = p.y; }
+      else { s.to.x = p.x; s.to.y = p.y; }
+    } else if (s.type === 'box' || s.type === 'boxfilled' || s.type === 'highlight' || s.type === 'image') {
       let {x, y, w, h} = s;
       const nh = resizeHandle;
       if (nh === 0) { x = p.x; y = p.y; w = s.x + s.w - p.x; h = s.y + s.h - p.y; }
@@ -2114,9 +2232,15 @@ function drawPreviewShape() {
   const base = { color, lineWidth: lineSizePx, lineType };
   if (tool === 'arrow') return { ...base, type: 'arrow', from: { ...start }, to: { ...current } };
   if (tool === 'line') return { ...base, type: 'line', from: { ...start }, to: { ...current } };
+  if (tool === 'arrow-double') return { ...base, type: 'arrow-double', from: { ...start }, to: { ...current } };
+  if (tool === 'curve') {
+    const { cpX, cpY } = curveControl(start, current);
+    return { ...base, type: 'curve', from: { ...start }, to: { ...current }, cp: { x: cpX, y: cpY } };
+  }
   const x = Math.min(start.x, current.x), y = Math.min(start.y, current.y);
   const w = Math.abs(current.x - start.x), h = Math.abs(current.y - start.y);
   if (tool === 'box') return { ...base, type: 'box', x, y, w, h };
+  if (tool === 'boxfilled') return { ...base, type: 'boxfilled', x, y, w, h, colorBg };
   if (tool === 'highlight') return { ...base, type: 'highlight', x, y, w, h, colorBg };
   if (tool === 'label') {
     const r = Math.max(LABEL_MIN_R, Math.hypot(current.x - start.x, current.y - start.y));
