@@ -819,6 +819,55 @@
     .passkey-input-wrap .btn-toggle-passkey:hover { color: #e4e4e7; }
     .project-gate-box .passkey-input-wrap { margin-bottom: 16px; }
     .project-gate-box .passkey-input-wrap input { margin-bottom: 0; }
+    .main-content { margin-right: 200px; }
+    .task-description-nav {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 200px;
+      height: 100vh;
+      background: #1a1a1e;
+      border-left: 1px solid #3f3f46;
+      overflow-y: auto;
+      z-index: 100;
+      padding: 16px 0;
+    }
+    .task-description-nav-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #a1a1aa;
+      padding: 0 12px 10px;
+      border-bottom: 1px solid #3f3f46;
+      margin-bottom: 10px;
+    }
+    .task-description-nav-list { display: flex; flex-direction: column; gap: 2px; }
+    .task-description-nav-item {
+      display: block;
+      padding: 8px 12px;
+      font-size: 0.8125rem;
+      color: #cb8334;
+      text-align: left;
+      background: transparent;
+      border: none;
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .task-description-nav-item:hover { background: #252529; }
+    .task-description-nav-item:focus { outline: none; border-left-color: #cb8334; }
+    .task-description-nav-item.task-description-nav-item-active {
+      border-left-color: #cb8334;
+      background: #252529;
+    }
+    .task-description-nav:focus-within .task-description-nav-item.task-description-nav-item-active {
+      font-weight: bold;
+      border-left-width: 4px;
+      background: #2a2a2e;
+    }
+    .task-description-nav:focus { outline: none; }
   </style>
 </head>
 <body>
@@ -881,6 +930,7 @@
     </div>
   </div>
 
+  <div class="main-content">
   <div class="page-header">
     <h1>Image Task & Result</h1>
     <button type="button" class="btn-logout" id="btn-logout">Logout</button>
@@ -911,7 +961,7 @@
       <button type="button" class="btn-delete-task" title="Delete task">Delete task</button>
       <div class="col">
         <span class="col-label">Image Task</span>
-        <div class="img-box view-only" data-role="task-img" data-side="task" title="Display">
+        <div class="img-box view-only" id="img-box-0-task" data-role="task-img" data-side="task" title="Display">
           <span class="placeholder-text">imagetask</span>
           <input type="text" class="img-box-caption" placeholder="index #1" maxlength="500" data-role="task-caption">
         </div>
@@ -930,7 +980,7 @@
       </div>
       <div class="col">
         <span class="col-label">Image Result</span>
-        <div class="img-box view-only" data-role="result-img" data-side="result" title="Display">
+        <div class="img-box view-only" id="img-box-0-result" data-role="result-img" data-side="result" title="Display">
           <span class="placeholder-text">image result</span>
           <input type="text" class="img-box-caption" placeholder="index #2" maxlength="500" data-role="result-caption">
         </div>
@@ -956,7 +1006,7 @@
       <button type="button" class="btn-delete-task" title="Delete task">Delete task</button>
       <div class="col">
         <span class="col-label">Image Task</span>
-        <div class="img-box view-only" data-role="task-img" data-side="task" title="Display">
+        <div class="img-box view-only" id="img-box-1-task" data-role="task-img" data-side="task" title="Display">
           <span class="placeholder-text">imagetask</span>
           <input type="text" class="img-box-caption" placeholder="index #3" maxlength="500" data-role="task-caption">
         </div>
@@ -975,7 +1025,7 @@
       </div>
       <div class="col">
         <span class="col-label">Image Result</span>
-        <div class="img-box view-only" data-role="result-img" data-side="result" title="Display">
+        <div class="img-box view-only" id="img-box-1-result" data-role="result-img" data-side="result" title="Display">
           <span class="placeholder-text">image result</span>
           <input type="text" class="img-box-caption" placeholder="index #4" maxlength="500" data-role="result-caption">
         </div>
@@ -1001,6 +1051,12 @@
       <button type="button" class="btn-new-task" id="btn-new-task">new task +</button>
     </div>
   </div>
+  </div>
+
+  <aside id="task-description-nav" class="task-description-nav" aria-label="Task description navigator" tabindex="0">
+    <div class="task-description-nav-title">Contents</div>
+    <nav class="task-description-nav-list" id="task-description-nav-list"></nav>
+  </aside>
 
   <script>
     function nowStr() {
@@ -1311,6 +1367,108 @@
       if (input) input.value = text || '';
     }
 
+    function buildTaskDescriptionNav() {
+      var list = document.getElementById('task-description-nav-list');
+      if (!list) return;
+      list.innerHTML = '';
+      var blocks = document.querySelectorAll('#blocks .block');
+      blocks.forEach(function (block) {
+        var blockIndex = block.getAttribute('data-block');
+        var taskBox = block.querySelector('[data-role="task-img"]');
+        var resultBox = block.querySelector('[data-role="result-img"]');
+        if (taskBox) {
+          var taskCaption = taskBox.querySelector('.img-box-caption');
+          var taskText = (taskCaption && taskCaption.value.trim()) || (taskCaption && taskCaption.getAttribute('placeholder')) || 'index #' + (parseInt(blockIndex, 10) * 2 + 1);
+          var taskId = 'img-box-' + blockIndex + '-task';
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'task-description-nav-item';
+          btn.setAttribute('data-target-id', taskId);
+          btn.textContent = taskText;
+          btn.addEventListener('click', function () {
+            var el = document.getElementById(taskId);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+          list.appendChild(btn);
+        }
+        if (resultBox) {
+          var resultCaption = resultBox.querySelector('.img-box-caption');
+          var resultText = (resultCaption && resultCaption.value.trim()) || (resultCaption && resultCaption.getAttribute('placeholder')) || 'index #' + (parseInt(blockIndex, 10) * 2 + 2);
+          var resultId = 'img-box-' + blockIndex + '-result';
+          var btn2 = document.createElement('button');
+          btn2.type = 'button';
+          btn2.className = 'task-description-nav-item';
+          btn2.setAttribute('data-target-id', resultId);
+          btn2.textContent = resultText;
+          btn2.addEventListener('click', function () {
+            var el = document.getElementById(resultId);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+          list.appendChild(btn2);
+        }
+      });
+      updateTaskDescriptionNavHighlight();
+    }
+
+    function updateTaskDescriptionNavHighlight() {
+      var list = document.getElementById('task-description-nav-list');
+      if (!list) return;
+      var items = list.querySelectorAll('.task-description-nav-item');
+      if (!items.length) return;
+      var targetId = null;
+      var threshold = 120;
+      var blocks = document.querySelectorAll('#blocks .block');
+      blocks.forEach(function (block) {
+        var taskBox = block.querySelector('[data-role="task-img"]');
+        var resultBox = block.querySelector('[data-role="result-img"]');
+        [taskBox, resultBox].forEach(function (box) {
+          if (!box || !box.id) return;
+          var rect = box.getBoundingClientRect();
+          if (rect.top <= threshold && rect.bottom > 0) targetId = box.id;
+        });
+      });
+      if (!targetId) {
+        var maxBottom = 0;
+        blocks.forEach(function (block) {
+          var taskBox = block.querySelector('[data-role="task-img"]');
+          var resultBox = block.querySelector('[data-role="result-img"]');
+          [taskBox, resultBox].forEach(function (box) {
+            if (!box || !box.id) return;
+            var rect = box.getBoundingClientRect();
+            if (rect.bottom > 0 && rect.top < window.innerHeight && rect.bottom > maxBottom) {
+              maxBottom = rect.bottom;
+              targetId = box.id;
+            }
+          });
+        });
+      }
+      if (!targetId && items.length) targetId = items[0].getAttribute('data-target-id');
+      items.forEach(function (item) {
+        item.classList.toggle('task-description-nav-item-active', item.getAttribute('data-target-id') === targetId);
+      });
+    }
+
+    function setTaskDescriptionNavActiveByIndex(index, useSmooth) {
+      var list = document.getElementById('task-description-nav-list');
+      if (!list) return;
+      var items = list.querySelectorAll('.task-description-nav-item');
+      if (!items.length || index < 0 || index >= items.length) return;
+      var targetId = items[index].getAttribute('data-target-id');
+      items.forEach(function (item, i) { item.classList.toggle('task-description-nav-item-active', i === index); });
+      var el = document.getElementById(targetId);
+      if (el) el.scrollIntoView({ behavior: useSmooth !== false ? 'smooth' : 'auto', block: 'start' });
+    }
+
+    function getCurrentTaskDescriptionNavIndex() {
+      var list = document.getElementById('task-description-nav-list');
+      if (!list) return 0;
+      var items = list.querySelectorAll('.task-description-nav-item');
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].classList.contains('task-description-nav-item-active')) return i;
+      }
+      return 0;
+    }
+
     function getCommentsData(commentsEl) {
       var items = commentsEl.querySelectorAll('.comment-item');
       return Array.from(items).map(function (item) {
@@ -1333,7 +1491,7 @@
         '<button type="button" class="btn-delete-task" title="Delete task">Delete task</button>' +
         '<div class="col">' +
           '<span class="col-label">Image Task</span>' +
-          '<div class="img-box view-only" data-role="task-img" data-side="task" title="Display">' +
+          '<div class="img-box view-only" id="img-box-' + index + '-task" data-role="task-img" data-side="task" title="Display">' +
             '<span class="placeholder-text">imagetask</span>' +
             '<input type="text" class="img-box-caption" placeholder="index #' + (index * 2 + 1) + '" maxlength="500" data-role="task-caption">' +
           '</div>' +
@@ -1349,7 +1507,7 @@
         '</div>' +
         '<div class="col">' +
           '<span class="col-label">Image Result</span>' +
-          '<div class="img-box view-only" data-role="result-img" data-side="result" title="Display">' +
+          '<div class="img-box view-only" id="img-box-' + index + '-result" data-role="result-img" data-side="result" title="Display">' +
             '<span class="placeholder-text">image result</span>' +
             '<input type="text" class="img-box-caption" placeholder="index #' + (index * 2 + 2) + '" maxlength="500" data-role="result-caption">' +
           '</div>' +
@@ -1474,6 +1632,7 @@
         }
       }
       container.querySelectorAll('.block').forEach(bindBlockEvents);
+      buildTaskDescriptionNav();
     }
 
     function loadDataFromJson() {
@@ -1758,7 +1917,7 @@
           });
           box.querySelectorAll('.img-box-caption').forEach(function (input) {
             input.addEventListener('click', function (e) { e.stopPropagation(); });
-            input.addEventListener('blur', function () { updateDataJsonOnServer(); });
+            input.addEventListener('blur', function () { updateDataJsonOnServer(); buildTaskDescriptionNav(); });
           });
           return;
         }
@@ -2059,6 +2218,7 @@
         blocks.insertBefore(out.sep, newTaskRow);
         blocks.insertBefore(out.block, newTaskRow);
         updateDataJsonOnServer();
+        buildTaskDescriptionNav();
         return;
       }
       var item = e.target.closest('.comment-item');
@@ -2406,6 +2566,50 @@
       });
     }
 
+    buildTaskDescriptionNav();
+    (function initTaskDescriptionNavBehavior() {
+      var navEl = document.getElementById('task-description-nav');
+      var scrollTicking = false;
+      function onScroll() {
+        if (scrollTicking) return;
+        scrollTicking = true;
+        requestAnimationFrame(function () {
+          updateTaskDescriptionNavHighlight();
+          scrollTicking = false;
+        });
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      if (navEl) {
+        var wheelLast = 0;
+        var wheelThrottleMs = 140;
+        navEl.addEventListener('wheel', function (e) {
+          e.preventDefault();
+          var now = Date.now();
+          if (now - wheelLast < wheelThrottleMs) return;
+          wheelLast = now;
+          var list = document.getElementById('task-description-nav-list');
+          if (!list) return;
+          var items = list.querySelectorAll('.task-description-nav-item');
+          if (!items.length) return;
+          var idx = getCurrentTaskDescriptionNavIndex();
+          idx = e.deltaY > 0 ? Math.min(items.length - 1, idx + 1) : Math.max(0, idx - 1);
+          setTaskDescriptionNavActiveByIndex(idx, false);
+          if (items[idx]) items[idx].focus();
+        }, { passive: false });
+        navEl.addEventListener('keydown', function (e) {
+          if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+          e.preventDefault();
+          var list = document.getElementById('task-description-nav-list');
+          if (!list) return;
+          var items = list.querySelectorAll('.task-description-nav-item');
+          if (!items.length) return;
+          var idx = getCurrentTaskDescriptionNavIndex();
+          idx = e.key === 'ArrowDown' ? Math.min(items.length - 1, idx + 1) : Math.max(0, idx - 1);
+          setTaskDescriptionNavActiveByIndex(idx);
+          if (items[idx]) items[idx].focus();
+        });
+      }
+    })();
     initPasskeyToggles();
     initProjectGate();
   </script>
