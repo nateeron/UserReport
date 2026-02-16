@@ -180,6 +180,27 @@
     #canvas-size-dialog .dialog-actions .btn-ok { background: #3b82f6; color: #fff; }
     #canvas-size-dialog .canvas-pad-diagram { margin: 8px 0; font-size: 11px; color: #a1a1aa; }
     #canvas-size-dialog .canvas-pad-diagram pre { margin: 0; font-family: inherit; }
+    /* Dialog ผล Save (ตกลง) */
+    #save-result-dialog {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      min-width: 280px;
+      max-width: 90vw;
+      z-index: 2200;
+      background: #1e2128;
+      border: 1px solid #2a3040;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      padding: 16px;
+    }
+    #save-result-dialog.visible { display: block; }
+    #save-result-dialog .save-result-message { font-size: 14px; color: #e7eaf0; margin-bottom: 16px; white-space: pre-wrap; word-break: break-word; }
+    #save-result-dialog .save-result-actions { display: flex; justify-content: flex-end; }
+    #save-result-dialog .save-result-ok { padding: 8px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; border: none; background: #3b82f6; color: #fff; }
+    #save-result-dialog .save-result-ok:hover { background: #2563eb; }
     #wrap { height: calc(100vh - 100px); display:flex; justify-content:center; align-items:center; overflow: auto; }
     #canvas-zoom-wrap { display: inline-block; position: relative; transform-origin: center center; }
     #canvas-border-overlay { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 2; }
@@ -344,6 +365,13 @@ Left |   content   | Right
     <div class="text-dialog-actions">
       <button type="button" class="btn-cancel" id="text-dialog-cancel">ยกเลิก</button>
       <button type="button" class="btn-ok" id="text-dialog-ok">ตกลง</button>
+    </div>
+  </div>
+
+  <div id="save-result-dialog">
+    <div class="save-result-message" id="save-result-message"></div>
+    <div class="save-result-actions">
+      <button type="button" class="save-result-ok" id="save-result-ok">ตกลง</button>
     </div>
   </div>
 
@@ -1956,12 +1984,36 @@ canvas.addEventListener('mouseleave', () => {
   canvasBorderResizeHandle = null;
 });
 
+(function initSaveResultDialog() {
+  var dialog = document.getElementById('save-result-dialog');
+  var messageEl = document.getElementById('save-result-message');
+  var btnOk = document.getElementById('save-result-ok');
+  if (!dialog || !messageEl || !btnOk) return;
+  window.showSaveResultDialog = function (msg) {
+    messageEl.textContent = msg || '';
+    dialog.classList.add('visible');
+  };
+  function closeSaveResultDialog() {
+    dialog.classList.remove('visible');
+  }
+  btnOk.addEventListener('click', closeSaveResultDialog);
+  dialog.addEventListener('click', function (e) {
+    if (e.target === dialog) closeSaveResultDialog();
+  });
+})();
+
 document.getElementById('save').onclick = async () => {
-  if (!img) return alert("กรุณาโหลดรูปก่อน");
+  const saveBtn = document.getElementById('save');
+  if (!img) {
+    showSaveResultDialog("กรุณาโหลดรูปก่อน");
+    return;
+  }
+  if (saveBtn) saveBtn.disabled = true;
   const params = new URLSearchParams(window.location.search);
   const imageUrl = params.get('image');
   if (!imageUrl) {
-    alert("เปิดจากหน้าหลัก (เลือกแก้ไขที่รูป) เพื่อบันทึกทับรูปบน Server");
+    if (saveBtn) saveBtn.disabled = false;
+    showSaveResultDialog("เปิดจากหน้าหลัก (เลือกแก้ไขที่รูป) เพื่อบันทึกทับรูปบน Server");
     return;
   }
   let filename = '';
@@ -1972,14 +2024,22 @@ document.getElementById('save').onclick = async () => {
     filename = match ? decodeURIComponent(match[1]) : '';
   } catch (_) {}
   if (!filename) {
-    alert("ไม่พบชื่อไฟล์รูปเดิม");
+    if (saveBtn) saveBtn.disabled = false;
+    showSaveResultDialog("ไม่พบชื่อไฟล์รูปเดิม");
     return;
   }
   filename = filename.split('?')[0].split('#')[0].trim() || filename;
   const isJpeg = /\.(jpe?g|jfif)$/i.test(filename);
   const mime = isJpeg ? 'image/jpeg' : 'image/png';
   const quality = isJpeg ? 0.92 : undefined;
-  const dataUrl = quality != null ? canvas.toDataURL(mime, quality) : canvas.toDataURL(mime);
+  let dataUrl;
+  try {
+    dataUrl = quality != null ? canvas.toDataURL(mime, quality) : canvas.toDataURL(mime);
+  } catch (err) {
+    if (saveBtn) saveBtn.disabled = false;
+    showSaveResultDialog("ไม่สามารถอ่านข้อมูลรูปได้ (อาจเป็นรูปข้าม domain). " + (err.message || ''));
+    return;
+  }
   const blob = await (await fetch(dataUrl)).blob();
   const blobWithType = new Blob([blob], { type: mime });
   const form = new FormData();
@@ -1990,13 +2050,16 @@ document.getElementById('save').onclick = async () => {
     const res = await fetch(api, { method: 'POST', body: form });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Save ไม่สำเร็จ');
+      if (saveBtn) saveBtn.disabled = false;
+      showSaveResultDialog(data.error || 'Save ไม่สำเร็จ');
       return;
     }
-    alert("บันทึกทับรูปบน Server แล้ว");
+    showSaveResultDialog("บันทึกทับรูปบน Server แล้ว");
     try { window.parent.postMessage({ type: 'editimage-saved' }, '*'); } catch (_) {}
   } catch (e) {
-    alert("เกิดข้อผิดพลาด: " + (e.message || 'Save ไม่สำเร็จ'));
+    showSaveResultDialog("เกิดข้อผิดพลาด: " + (e.message || 'Save ไม่สำเร็จ'));
+  } finally {
+    if (saveBtn) saveBtn.disabled = false;
   }
 };
 
@@ -2057,10 +2120,20 @@ document.getElementById('save').onclick = async () => {
 (function loadFromQuery() {
   const params = new URLSearchParams(window.location.search);
   const imageUrl = params.get('image');
+  const saveBtn = document.getElementById('save');
   if (!imageUrl) return;
+  if (saveBtn) saveBtn.disabled = true;
   const im = new Image();
-  im.onload = () => { img = im; fitCanvasToImage(im); };
-  im.onerror = () => console.warn('Could not load image from URL');
+  im.crossOrigin = 'anonymous';
+  im.onload = () => {
+    img = im;
+    fitCanvasToImage(im);
+    if (saveBtn) saveBtn.disabled = false;
+  };
+  im.onerror = () => {
+    console.warn('Could not load image from URL');
+    if (saveBtn) saveBtn.disabled = false;
+  };
   im.src = imageUrl;
 })();
 </script>

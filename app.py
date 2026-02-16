@@ -102,6 +102,10 @@ def safe_filename(original):
 @app.route("/api/upload-overwrite", methods=["OPTIONS"])
 def upload_overwrite_options():
     resp = make_response("", 200)
+    resp.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    resp.headers["Access-Control-Max-Age"] = "86400"
     return resp
 
 
