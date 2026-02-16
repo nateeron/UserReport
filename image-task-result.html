@@ -395,6 +395,34 @@
       z-index: 10000;
     }
     .img-zoom-overlay .img-zoom-percent.show { opacity: 1; }
+    .img-zoom-overlay-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 120px;
+      background: rgba(0,0,0,0.85);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px;
+      overflow-x: auto;
+      z-index: 10001;
+    }
+    .img-zoom-overlay-bar-thumb {
+      width: 100px;
+      height: 100px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+    }
+    .img-zoom-overlay-bar-thumb:hover { border-color: rgba(255,255,255,0.5); }
+    .img-zoom-overlay-bar-thumb.selected { border-color: #cb8334; box-shadow: 0 0 0 2px #cb8334; }
+    .img-zoom-overlay-bar-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
     .comments {
       display: flex;
       flex-direction: column;
@@ -953,6 +981,7 @@
       <img class="img-zoom-image" id="img-zoom-image" src="" alt="">
     </div>
     <div class="img-zoom-percent" id="img-zoom-percent">100%</div>
+    <div id="img-zoom-overlay-bar" class="img-zoom-overlay-bar"></div>
   </div>
 
   <div id="blocks">
@@ -1745,16 +1774,51 @@
       el._zoomHide = setTimeout(function () { el.classList.remove('show'); }, 3000);
     }
 
-    function openLightbox(src) {
+    function openLightbox(src, imgBox) {
       var overlay = document.getElementById('img-zoom-overlay');
       var wrap = document.getElementById('img-zoom-wrap');
       var imgEl = document.getElementById('img-zoom-image');
+      var overlayBar = document.getElementById('img-zoom-overlay-bar');
       if (!overlay || !wrap || !imgEl) return;
       imgZoomReset();
       imgEl.src = src;
       wrap.style.left = '';
       wrap.style.top = '';
       imgZoomApplyTransform();
+      if (overlayBar) {
+        overlayBar.innerHTML = '';
+        if (imgBox) {
+          var bar = getBarForBox(imgBox);
+          if (bar) {
+            var thumbs = bar.querySelectorAll('.img-bar-thumb');
+            var selIdx = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+            thumbs.forEach(function (thumb, i) {
+              var im = thumb.querySelector('img');
+              if (!im || !im.src) return;
+              var cell = document.createElement('div');
+              cell.className = 'img-zoom-overlay-bar-thumb' + (i === selIdx ? ' selected' : '');
+              cell.setAttribute('data-index', String(i));
+              var clone = document.createElement('img');
+              clone.src = im.src;
+              clone.alt = '';
+              cell.appendChild(clone);
+              cell.addEventListener('click', function () {
+                var s = this.getAttribute('data-index');
+                var idx = s ? parseInt(s, 10) : 0;
+                var t = thumbs[idx];
+                if (t) {
+                  var imgSrc = t.querySelector('img') && t.querySelector('img').src;
+                  if (imgSrc) imgEl.src = imgSrc;
+                  overlayBar.querySelectorAll('.img-zoom-overlay-bar-thumb').forEach(function (el, k) {
+                    el.classList.toggle('selected', k === idx);
+                  });
+                }
+              });
+              overlayBar.appendChild(cell);
+            });
+          }
+        }
+      }
       overlay.classList.add('active');
       overlay.setAttribute('aria-hidden', 'false');
       overlay.addEventListener('wheel', imgZoomOnWheel, { passive: false });
@@ -1773,6 +1837,8 @@
       if (wrap) wrap.removeEventListener('mousedown', imgZoomStartDrag);
       document.removeEventListener('mousemove', imgZoomDrag);
       document.removeEventListener('mouseup', imgZoomEndDrag);
+      var overlayBar = document.getElementById('img-zoom-overlay-bar');
+      if (overlayBar) overlayBar.innerHTML = '';
     }
 
     function imgZoomOnWheel(e) {
@@ -1913,7 +1979,7 @@
           box.addEventListener('click', function (e) {
             if (e.target.closest('.img-actions')) return;
             if (e.target.closest('.img-box-caption')) return;
-            if (e.target.tagName === 'IMG') { openLightbox(e.target.src); }
+            if (e.target.tagName === 'IMG') { openLightbox(e.target.src, e.target.closest('.img-box')); }
           });
           box.querySelectorAll('.img-box-caption').forEach(function (input) {
             input.addEventListener('click', function (e) { e.stopPropagation(); });
@@ -1928,7 +1994,7 @@
         box.addEventListener('click', function (e) {
           if (e.target === input) return;
           if (e.target.closest('.img-actions')) return;
-          if (e.target.tagName === 'IMG') { openLightbox(e.target.src); return; }
+          if (e.target.tagName === 'IMG') { openLightbox(e.target.src, e.target.closest('.img-box')); return; }
           input.click();
         });
         input.addEventListener('change', function () {
@@ -2255,6 +2321,29 @@
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && imgZoomOverlay.classList.contains('active')) closeLightbox();
       });
+    }
+    var imgZoomOverlayBar = document.getElementById('img-zoom-overlay-bar');
+    if (imgZoomOverlayBar) {
+      var zoomBarWheelLast = 0;
+      imgZoomOverlayBar.addEventListener('wheel', function (e) {
+        if (!imgZoomOverlay || !imgZoomOverlay.classList.contains('active')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var now = Date.now();
+        if (now - zoomBarWheelLast < 120) return;
+        zoomBarWheelLast = now;
+        var thumbs = imgZoomOverlayBar.querySelectorAll('.img-zoom-overlay-bar-thumb');
+        if (!thumbs.length) return;
+        var imgEl = document.getElementById('img-zoom-image');
+        if (!imgEl) return;
+        var selIdx = -1;
+        thumbs.forEach(function (t, i) { if (t.classList.contains('selected')) selIdx = i; });
+        if (selIdx < 0) selIdx = 0;
+        selIdx = e.deltaY > 0 ? Math.min(thumbs.length - 1, selIdx + 1) : Math.max(0, selIdx - 1);
+        var nextImg = thumbs[selIdx].querySelector('img');
+        if (nextImg && nextImg.src) imgEl.src = nextImg.src;
+        thumbs.forEach(function (t, i) { t.classList.toggle('selected', i === selIdx); });
+      }, { passive: false });
     }
 
     initConfirmDeleteDialog();
