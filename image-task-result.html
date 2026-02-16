@@ -1465,7 +1465,10 @@
           btn.textContent = taskText;
           btn.addEventListener('click', function () {
             var el = document.getElementById(taskId);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              try { window.history.replaceState(null, '', (window.location.pathname + window.location.search) + '#' + taskId); } catch (e) {}
+            }
           });
           list.appendChild(btn);
         }
@@ -1480,12 +1483,23 @@
           btn2.textContent = resultText;
           btn2.addEventListener('click', function () {
             var el = document.getElementById(resultId);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              try { window.history.replaceState(null, '', (window.location.pathname + window.location.search) + '#' + resultId); } catch (e) {}
+            }
           });
           list.appendChild(btn2);
         }
       });
       updateTaskDescriptionNavHighlight();
+      if (window.location.hash) {
+        var id = window.location.hash.replace(/^#/, '');
+        var el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: 'auto', block: 'start' });
+          requestAnimationFrame(updateTaskDescriptionNavHighlight);
+        }
+      }
     }
 
     function updateTaskDescriptionNavHighlight() {
@@ -1524,6 +1538,11 @@
       items.forEach(function (item) {
         item.classList.toggle('task-description-nav-item-active', item.getAttribute('data-target-id') === targetId);
       });
+      if (targetId && window.location.hash.replace(/^#/, '') !== targetId) {
+        try {
+          window.history.replaceState(null, '', (window.location.pathname + window.location.search) + '#' + targetId);
+        } catch (e) {}
+      }
     }
 
     function setTaskDescriptionNavActiveByIndex(index, useSmooth) {
@@ -1534,7 +1553,10 @@
       var targetId = items[index].getAttribute('data-target-id');
       items.forEach(function (item, i) { item.classList.toggle('task-description-nav-item-active', i === index); });
       var el = document.getElementById(targetId);
-      if (el) el.scrollIntoView({ behavior: useSmooth !== false ? 'smooth' : 'auto', block: 'start' });
+      if (el) {
+        el.scrollIntoView({ behavior: useSmooth !== false ? 'smooth' : 'auto', block: 'start' });
+        try { window.history.replaceState(null, '', (window.location.pathname + window.location.search) + '#' + targetId); } catch (e) {}
+      }
     }
 
     function getCurrentTaskDescriptionNavIndex() {
@@ -2990,6 +3012,19 @@
         });
       }
       window.addEventListener('scroll', onScroll, { passive: true });
+      function scrollToHash() {
+        var hash = window.location.hash;
+        if (!hash) return;
+        var id = hash.replace(/^#/, '');
+        if (!id) return;
+        var el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: 'auto', block: 'start' });
+          requestAnimationFrame(function () { updateTaskDescriptionNavHighlight(); });
+        }
+      }
+      if (window.location.hash) scrollToHash();
+      window.addEventListener('hashchange', scrollToHash);
       if (navEl) {
         var wheelLast = 0;
         var wheelThrottleMs = 140;

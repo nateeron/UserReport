@@ -5,44 +5,12 @@
       "name": "test",
       "passkeyHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
       "data": {
-        "savedAt": "2/16/2026, 11:40:38 PM",
-        "imageIndex": {
-          "task_0_5": "5bf45f1c-b53a-45e3-952f-5d0bb83835d9.jpg",
-          "task_0_6": "61c6f1e8-17ef-46e6-9516-5503b6839eb4.jpg",
-          "task_0_2": "f4690e72-9fd5-4969-b8bc-4b38b325fef4.jpg",
-          "task_0_3": "010db4e2-0ddb-4bcb-a4f7-5a6f4fc47f93.jpg",
-          "task_0_4": "cd8f17b6-f1b6-430b-8dad-f5fbd671c951.jpg",
-          "result_0": "a9ed42ef-9a79-4dcd-a660-c941478c9b3b.jpg",
-          "result_0_1": "fb2fb6c9-b06a-4162-8a17-fa62a9e844bf.jpg",
-          "result_0_2": "b02e69bf-d3f6-49d6-ab7a-df5a009363ea.jpg",
-          "result_0_3": "086504f1-d00c-4e1c-bbd1-1790be9ccb91.jpg",
-          "result_0_4": "3868c71c-6d6a-4b89-bce7-ad2d17807dd9.jpg",
-          "result_0_5": "520352c5-76ba-4199-a274-7e40e93c6080.jpg",
-          "task_1": "9da61831-fca9-4c42-8e61-7b1796e02bb8.jpg",
-          "task_1_1": "95f919dd-ed7f-4250-be34-cd376f77c125.jpg",
-          "task_1_2": "3492d0ae-2ef5-43e6-8383-2dcdad05e4d2.jpg",
-          "task_1_3": "5b671c70-0286-40f2-82c1-c879132726d2.jpg",
-          "task_1_4": "ad83c471-20dd-4376-8e6e-d7150d317211.jpg"
-        },
+        "savedAt": "2/17/2026, 12:00:50 AM",
+        "imageIndex": {},
         "tasks": [
           {
-            "taskImage": "task_0_5",
+            "taskImage": "task_0",
             "resultImage": "result_0",
-            "taskImageKeys": [
-              "task_0_5",
-              "task_0_6",
-              "task_0_2",
-              "task_0_3",
-              "task_0_4"
-            ],
-            "resultImageKeys": [
-              "result_0",
-              "result_0_1",
-              "result_0_2",
-              "result_0_3",
-              "result_0_4",
-              "result_0_5"
-            ],
             "taskDescription": "index #1",
             "resultDescription": "index #2",
             "taskComments": [],
@@ -51,19 +19,29 @@
           {
             "taskImage": "task_1",
             "resultImage": "result_1",
-            "taskImageKeys": [
-              "task_1",
-              "task_1_1",
-              "task_1_2",
-              "task_1_3",
-              "task_1_4"
-            ],
             "taskDescription": "index #3",
             "resultDescription": "index #4",
             "taskComments": [],
             "resultComments": []
+          },
+          {
+            "taskImage": "task_2",
+            "resultImage": "result_2",
+            "taskDescription": "index #5",
+            "resultDescription": "index #6",
+            "taskComments": [],
+            "resultComments": []
+          },
+          {
+            "taskImage": "task_3",
+            "resultImage": "result_3",
+            "taskDescription": "index #7",
+            "resultDescription": "index #8",
+            "taskComments": [],
+            "resultComments": []
           }
-        ]
+        ],
+        "publicGlobal": false
       },
       "public": "0"
     }
