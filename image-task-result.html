@@ -544,6 +544,96 @@
       color: #e4e4e7;
       word-break: break-word;
     }
+    .project-gate-box .project-card {
+      position: relative;
+    }
+    .project-gate-box .project-card .btn-delete-project {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: none;
+      border-radius: 6px;
+      background: rgba(0,0,0,0.5);
+      color: #a1a1aa;
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .project-gate-box .project-card .btn-delete-project:hover {
+      background: #dc2626;
+      color: #fff;
+    }
+    /* Dialog ยืนยันลบ Project (ใส่ตัวเลข Random 4 ตัว) */
+    #delete-project-dialog-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 10002;
+      align-items: center;
+      justify-content: center;
+    }
+    #delete-project-dialog-overlay.active { display: flex; }
+    #delete-project-dialog-overlay .delete-project-dialog-box {
+      background: #252529;
+      border: 1px solid #3f3f46;
+      border-radius: 12px;
+      padding: 24px;
+      min-width: 320px;
+    }
+    #delete-project-dialog-overlay .delete-project-dialog-box h3 { margin: 0 0 12px; font-size: 1.125rem; color: #fafafa; }
+    #delete-project-dialog-overlay .delete-project-dialog-box .delete-project-dialog-msg { color: #a1a1aa; font-size: 0.875rem; margin-bottom: 12px; }
+    #delete-project-dialog-overlay .delete-project-dialog-box .delete-project-random-code {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: #fafafa;
+      background: #18181b;
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      text-align: center;
+      border: 1px solid #3f3f46;
+    }
+    #delete-project-dialog-overlay .delete-project-dialog-box input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      color: #e4e4e7;
+      font-size: 1rem;
+      box-sizing: border-box;
+      letter-spacing: 0.15em;
+      text-align: center;
+    }
+    #delete-project-dialog-overlay .delete-project-dialog-box .delete-project-dialog-error {
+      color: #dc2626;
+      font-size: 0.8125rem;
+      margin-top: 8px;
+    }
+    #delete-project-dialog-overlay .delete-project-dialog-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+    #delete-project-dialog-overlay .delete-project-dialog-actions button {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      border: none;
+    }
+    #delete-project-dialog-overlay .delete-project-dialog-cancel { background: #3f3f46; color: #e4e4e7; }
+    #delete-project-dialog-overlay .delete-project-dialog-confirm { background: #dc2626; color: #fff; }
+    #delete-project-dialog-overlay .delete-project-dialog-confirm:hover { background: #b91c1c; }
     /* Passkey dialog (เปิดหลังเลือกการ์ด) */
     #passkey-dialog-overlay {
       display: none;
@@ -648,6 +738,20 @@
       <div class="passkey-dialog-actions">
         <button type="button" class="passkey-dialog-cancel">Cancel</button>
         <button type="button" class="passkey-dialog-load">Load</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="delete-project-dialog-overlay">
+    <div class="delete-project-dialog-box">
+      <h3 id="delete-project-dialog-title">ยืนยันลบ Project</h3>
+      <p class="delete-project-dialog-msg" id="delete-project-dialog-msg">ลบ Project นี้? พิมพ์ตัวเลขด้านล่างเพื่อยืนยัน</p>
+      <div class="delete-project-random-code" id="delete-project-random-code">0000</div>
+      <input type="text" id="delete-project-confirm-input" placeholder="พิมพ์ตัวเลข 4 หลัก" maxlength="4" inputmode="numeric" autocomplete="off">
+      <div id="delete-project-dialog-error" class="delete-project-dialog-error" style="display:none;"></div>
+      <div class="delete-project-dialog-actions">
+        <button type="button" class="delete-project-dialog-cancel">ยกเลิก</button>
+        <button type="button" class="delete-project-dialog-confirm">ลบ Project</button>
       </div>
     </div>
   </div>
@@ -1423,11 +1527,19 @@
         if (e.data && e.data.type === 'editimage-saved' && window._editImageBox) {
           var box = window._editImageBox;
           var img = box && box.querySelector('img');
-          if (img && img.src) {
-            var base = img.src.split('?')[0];
+          if (img) {
             var ver = String(Date.now());
             box.setAttribute('data-versionimage', ver);
-            img.src = base + '?v=' + ver;
+            var filename = getImgBoxFilename(box);
+            if (filename) {
+              var bases = getDataAndImageBase();
+              var imageBase = bases.imageBase;
+              if (imageBase.length && imageBase.charAt(imageBase.length - 1) !== '/') imageBase += '/';
+              img.src = imageBase + filename + '?v=' + ver;
+            } else if (img.src && img.src.indexOf('blob:') !== 0) {
+              var base = img.src.split('?')[0];
+              img.src = base + '?v=' + ver;
+            }
           }
           closeEditDialog();
         }
@@ -1446,6 +1558,7 @@
         e.preventDefault();
         var imgEl = box.querySelector('img');
         var src = imgEl && imgEl.src;
+        var filename = getImgBoxFilename(box);
         var editDialog = document.getElementById('edit-image-dialog');
         var editIframe = document.getElementById('edit-image-iframe');
         if (editDialog && editIframe) {
@@ -1456,6 +1569,7 @@
             if (src.indexOf('/') === 0) absUrl = window.location.origin + src;
             url += '?image=' + encodeURIComponent(absUrl);
           }
+          if (filename) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'filename=' + encodeURIComponent(filename);
           editIframe.src = url;
           editDialog.classList.add('active');
         }
@@ -1538,6 +1652,91 @@
         return fetch(prefix + '/api/projects').then(function (r) { return r.json(); });
       }
 
+      var deleteProjectOverlay = document.getElementById('delete-project-dialog-overlay');
+      var deleteProjectMsgEl = document.getElementById('delete-project-dialog-msg');
+      var deleteProjectCodeEl = document.getElementById('delete-project-random-code');
+      var deleteProjectInput = document.getElementById('delete-project-confirm-input');
+      var deleteProjectError = document.getElementById('delete-project-dialog-error');
+      var deleteProjectCancelBtn = deleteProjectOverlay && deleteProjectOverlay.querySelector('.delete-project-dialog-cancel');
+      var deleteProjectConfirmBtn = deleteProjectOverlay && deleteProjectOverlay.querySelector('.delete-project-dialog-confirm');
+      var pendingDeleteProjectId = null;
+      var pendingDeleteProjectName = '';
+      var pendingDeleteRandomCode = '';
+
+      function openDeleteProjectDialog(projectId, projectName) {
+        pendingDeleteProjectId = projectId;
+        pendingDeleteProjectName = projectName || projectId;
+        pendingDeleteRandomCode = String(1000 + Math.floor(Math.random() * 9000));
+        if (deleteProjectMsgEl) deleteProjectMsgEl.textContent = 'ลบ Project "' + (projectName || projectId) + '"? พิมพ์ตัวเลขด้านล่างเพื่อยืนยัน';
+        if (deleteProjectCodeEl) deleteProjectCodeEl.textContent = pendingDeleteRandomCode;
+        if (deleteProjectInput) { deleteProjectInput.value = ''; deleteProjectInput.focus(); }
+        if (deleteProjectError) { deleteProjectError.style.display = 'none'; deleteProjectError.textContent = ''; }
+        if (deleteProjectOverlay) deleteProjectOverlay.classList.add('active');
+      }
+
+      function closeDeleteProjectDialog() {
+        pendingDeleteProjectId = null;
+        pendingDeleteProjectName = '';
+        pendingDeleteRandomCode = '';
+        if (deleteProjectOverlay) deleteProjectOverlay.classList.remove('active');
+        if (deleteProjectInput) deleteProjectInput.value = '';
+        if (deleteProjectError) { deleteProjectError.style.display = 'none'; deleteProjectError.textContent = ''; }
+      }
+
+      function showDeleteProjectError(msg) {
+        if (!deleteProjectError) return;
+        deleteProjectError.textContent = msg || '';
+        deleteProjectError.style.display = msg ? 'block' : 'none';
+      }
+
+      if (deleteProjectCancelBtn) deleteProjectCancelBtn.addEventListener('click', closeDeleteProjectDialog);
+      if (deleteProjectOverlay) {
+        deleteProjectOverlay.addEventListener('click', function (e) {
+          if (e.target === deleteProjectOverlay) closeDeleteProjectDialog();
+        });
+      }
+      if (deleteProjectInput) {
+        deleteProjectInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' && deleteProjectConfirmBtn) deleteProjectConfirmBtn.click();
+          if (e.key === 'Escape') closeDeleteProjectDialog();
+        });
+        deleteProjectInput.addEventListener('input', function () {
+          this.value = this.value.replace(/\D/g, '').slice(0, 4);
+        });
+      }
+      if (deleteProjectConfirmBtn) {
+        deleteProjectConfirmBtn.addEventListener('click', function () {
+          var inputVal = (deleteProjectInput && deleteProjectInput.value) || '';
+          showDeleteProjectError('');
+          if (inputVal !== pendingDeleteRandomCode) {
+            showDeleteProjectError('ตัวเลขไม่ตรงกับที่แสดง กรุณาพิมพ์ให้ถูกต้อง');
+            return;
+          }
+          if (!pendingDeleteProjectId) { closeDeleteProjectDialog(); return; }
+          var prefix = getApiPrefix();
+          fetch(prefix + '/api/delete-project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectId: pendingDeleteProjectId })
+          })
+            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (data) { return { status: r.status, data: data }; }); })
+            .then(function (res) {
+              if (res.status === 404 || (res.data && res.data.error)) {
+                showDeleteProjectError(res.data && res.data.error ? res.data.error : 'ไม่พบ Project');
+                return;
+              }
+              closeDeleteProjectDialog();
+              return fetchProjects();
+            })
+            .then(function (res) {
+              if (res && res.projects !== undefined) fillProjectCards(res.projects || []);
+            })
+            .catch(function () {
+              showDeleteProjectError('ลบไม่สำเร็จ');
+            });
+        });
+      }
+
       function fillProjectCards(projects) {
         cardsContainer.innerHTML = '';
         (projects || []).forEach(function (p) {
@@ -1548,7 +1747,20 @@
           nameEl.className = 'project-card-name';
           nameEl.textContent = p.name || p.id;
           card.appendChild(nameEl);
-          card.addEventListener('click', function () {
+          var btnDel = document.createElement('button');
+          btnDel.type = 'button';
+          btnDel.className = 'btn-delete-project';
+          btnDel.title = 'ลบ Project';
+          btnDel.setAttribute('aria-label', 'ลบ Project');
+          btnDel.textContent = '\u2715';
+          btnDel.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openDeleteProjectDialog(p.id, p.name || p.id);
+          });
+          card.appendChild(btnDel);
+          card.addEventListener('click', function (e) {
+            if (e.target === btnDel || e.target.closest('.btn-delete-project')) return;
             selectedProjectId = p.id;
             selectedProjectName = p.name || p.id;
             passkeyTitle.textContent = 'Enter Passkey — ' + selectedProjectName;

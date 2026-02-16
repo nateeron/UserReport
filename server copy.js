@@ -63,8 +63,9 @@ app.post('/api/upload-overwrite', uploadOverwrite.single('image'), function (req
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
-  const raw = (req.body && req.body.filename) || '';
-  const name = path.basename(raw).replace(/[^a-zA-Z0-9._-]/g, '_');
+  // ใช้ชื่อเดิม: form field 'filename' หรือชื่อที่แนบมากับไฟล์ (originalname)
+  const raw = (req.body && req.body.filename) || (req.file.originalname || '');
+  const name = path.basename(String(raw).split('?')[0].split('#')[0].trim()).replace(/[^a-zA-Z0-9._-]/g, '_');
   if (!name || !/\.(png|jpg|jpeg|gif|webp)$/i.test(name)) {
     return res.status(400).json({ error: 'Invalid or missing filename' });
   }

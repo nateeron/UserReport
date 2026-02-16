@@ -2016,19 +2016,21 @@ document.getElementById('save').onclick = async () => {
     showSaveResultDialog("เปิดจากหน้าหลัก (เลือกแก้ไขที่รูป) เพื่อบันทึกทับรูปบน Server");
     return;
   }
-  let filename = '';
-  try {
-    const u = new URL(imageUrl);
-    const pathname = u.pathname || '';
-    const match = pathname.match(/\/image\/(.+)$/) || pathname.match(/\/([^/]+)$/);
-    filename = match ? decodeURIComponent(match[1]) : '';
-  } catch (_) {}
+  let filename = (params.get('filename') || '').trim();
+  if (!filename) {
+    try {
+      const u = new URL(imageUrl);
+      const pathname = u.pathname || '';
+      const match = pathname.match(/\/image\/(.+)$/) || pathname.match(/\/([^/]+)$/);
+      filename = match ? decodeURIComponent(match[1]) : '';
+    } catch (_) {}
+  }
+  filename = filename.split('?')[0].split('#')[0].trim() || filename;
   if (!filename) {
     if (saveBtn) saveBtn.disabled = false;
     showSaveResultDialog("ไม่พบชื่อไฟล์รูปเดิม");
     return;
   }
-  filename = filename.split('?')[0].split('#')[0].trim() || filename;
   const isJpeg = /\.(jpe?g|jfif)$/i.test(filename);
   const mime = isJpeg ? 'image/jpeg' : 'image/png';
   const quality = isJpeg ? 0.92 : undefined;
@@ -2043,7 +2045,7 @@ document.getElementById('save').onclick = async () => {
   const blob = await (await fetch(dataUrl)).blob();
   const blobWithType = new Blob([blob], { type: mime });
   const form = new FormData();
-  form.append('image', blobWithType, isJpeg ? 'annotated.jpg' : 'annotated.png');
+  form.append('image', blobWithType, filename);
   form.append('filename', filename);
   const api = (window.location.origin || '') + '/api/upload-overwrite';
   try {

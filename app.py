@@ -99,6 +99,15 @@ def safe_filename(original):
     return f"{base}_{int(datetime.now().timestamp())}{ext}"
 
 
+def uuid_filename(original_filename):
+    """สร้างชื่อไฟล์แบบ UUID เช่น 84627ba9-802f-4238-ae09-b3c0b0771064.png ใช้ตอนอัปโหลดรูปใหม่"""
+    name = secure_filename(original_filename) or "image"
+    _, ext = os.path.splitext(name)
+    if not ext or ext.lower() not in {".png", ".jpg", ".jpeg", ".gif", ".webp"}:
+        ext = ".png"
+    return str(uuid.uuid4()) + ext
+
+
 @app.route("/api/upload-overwrite", methods=["OPTIONS"])
 def upload_overwrite_options():
     resp = make_response("", 200)
@@ -111,13 +120,13 @@ def upload_overwrite_options():
 
 @app.route("/api/upload-overwrite", methods=["POST"])
 def upload_overwrite():
-    """บันทึกรูปทับไฟล์เดิม (ใช้จาก editimage.html Save)"""
+    """Save ทับรูปเดิม: รับ filename ของรูปเดิม แล้วบันทึกไฟล์ใหม่ทับที่ path เดิม (ใช้จาก editimage.html Save)"""
     if "image" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
     file = request.files["image"]
     if not file or file.filename == "":
         return jsonify({"error": "No file selected"}), 400
-    raw_filename = (request.form.get("filename") or "").strip()
+    raw_filename = (request.form.get("filename") or "").strip() or (file.filename or "").strip()
     if not raw_filename:
         return jsonify({"error": "filename required"}), 400
     raw_filename = raw_filename.split("?")[0].split("#")[0].strip()
@@ -145,7 +154,8 @@ def upload_overwrite():
     ct = (file.content_type or "").strip().lower()
     if not ct.startswith("image/"):
         return jsonify({"error": "Only images allowed"}), 400
-    file.save(path)
+    # บันทึกทับไฟล์เดิมที่ path เดิม (overwrite)
+    file.save(str(path))
     return jsonify({"ok": True, "filename": name})
 
 
@@ -173,7 +183,7 @@ def upload():
     file.seek(0)
     if size > MAX_SIZE:
         return jsonify({"error": "File too large"}), 400
-    filename = safe_filename(file.filename)
+    filename = uuid_filename(file.filename)
     file.save(IMAGE_DIR / filename)
     return jsonify({"filename": filename})
 
@@ -233,6 +243,25 @@ def api_create_project():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/delete-project", methods=["POST"])
+def api_delete_project():
+    """ลบ Project ตาม projectId"""
+    body = request.get_json(force=True, silent=True) or {}
+    project_id = body.get("projectId")
+    if not project_id:
+        return jsonify({"error": "projectId required"}), 400
+    try:
+        data = read_data_file()
+        projects = data.get("projects") or []
+        new_list = [p for p in projects if p.get("id") != project_id]
+        if len(new_list) == len(projects):
+            return jsonify({"error": "Project not found"}), 404
+        write_data_file({"projects": new_list})
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/save", methods=["POST"])
 def save_report():
     """บันทึกข้อมูลของ Project (ต้องส่ง projectId + passkey)"""
@@ -259,16 +288,43 @@ def save_report():
         full = read_data_file()
         projects = full.get("projects") or []
         found = False
+        to_remove = set()
         for p in projects:
             if p.get("id") == project_id:
                 if p.get("passkeyHash") != passkey_hash(passkey):
                     return jsonify({"error": "Invalid passkey"}), 403
+                old_data = p.get("data") or {}
+                old_index = old_data.get("imageIndex") or {}
+                new_index = payload.get("imageIndex") or {}
+                old_filenames = set(old_index.values())
+                new_filenames = set(new_index.values())
+                to_remove = old_filenames - new_filenames
                 p["data"] = payload
                 found = True
                 break
         if not found:
             return jsonify({"error": "Project not found"}), 404
         write_data_file(full)
+        for filename in to_remove:
+            if not filename or not isinstance(filename, str):
+                continue
+            name = os.path.basename(filename).strip()
+            name = secure_filename(name) or name
+            if not name:
+                continue
+            path = IMAGE_DIR / name
+            try:
+                if not path.resolve().is_relative_to(IMAGE_DIR.resolve()):
+                    continue
+            except AttributeError:
+                if not os.path.realpath(path).startswith(os.path.realpath(IMAGE_DIR)):
+                    continue
+            if path.exists() and path.is_file():
+                try:
+                    path.unlink()
+                    print("[Save] deleted unused image: %s" % name)
+                except OSError as e:
+                    print("[Save] could not delete image %s: %s" % (name, e))
         print("[Save] data.json updated, project=%s, tasks=%s" % (project_id, len(payload["tasks"])))
         return jsonify({"ok": True, "saved": "data.json", "dataJsonUpdated": True})
     except Exception as e:
