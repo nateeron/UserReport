@@ -2008,6 +2008,20 @@
           var idx = Array.from(thumbs).indexOf(thumb);
           if (idx >= 0) { setBarSelectedIndex(bar, idx); syncBoxFromBar(box, bar); }
         });
+        var barWheelLast = 0;
+        bar.addEventListener('wheel', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var now = Date.now();
+          if (now - barWheelLast < 120) return;
+          barWheelLast = now;
+          var thumbs = bar.querySelectorAll('.img-bar-thumb');
+          if (!thumbs.length || !box) return;
+          var idx = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+          idx = e.deltaY > 0 ? Math.min(thumbs.length - 1, idx + 1) : Math.max(0, idx - 1);
+          setBarSelectedIndex(bar, idx);
+          syncBoxFromBar(box, bar);
+        }, { passive: false });
       });
     }
 
