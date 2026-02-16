@@ -1985,6 +1985,33 @@
             input.addEventListener('click', function (e) { e.stopPropagation(); });
             input.addEventListener('blur', function () { updateDataJsonOnServer(); buildTaskDescriptionNav(); });
           });
+          var side = box.getAttribute('data-side') || (box.getAttribute('data-role') === 'task-img' ? 'task' : 'result');
+          var bar = getBarForBox(box);
+          box.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer.types.indexOf('Files') >= 0) box.classList.add('drag-over');
+          });
+          box.addEventListener('dragleave', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!box.contains(e.relatedTarget)) box.classList.remove('drag-over');
+          });
+          box.addEventListener('drop', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            box.classList.remove('drag-over');
+            var files = e.dataTransfer.files;
+            if (!files || !files.length) return;
+            if (bar) {
+              for (var i = 0; i < files.length; i++) {
+                if (files[i].type.startsWith('image/')) uploadImageToBar(files[i], bar, blockIndex, side);
+              }
+            } else {
+              var file = files[0];
+              if (file && file.type.startsWith('image/')) uploadImage(file, box, blockIndex, side);
+            }
+          });
           return;
         }
         var input = box.querySelector('input[type="file"]');

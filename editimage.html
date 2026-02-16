@@ -5,46 +5,237 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Image Annotator (No Backend)</title>
   <style>
-    :root { color-scheme: dark; }
-    body { margin:0; font-family: system-ui; background:#0f1115; color:#e7eaf0; }
-    .bar { display:flex; gap:8px; align-items:center; padding:10px; border-bottom:1px solid #242833; background:#12151c; flex-wrap:wrap; }
-    .bar button, .bar input[type="color"] {
-      background:#171a21; color:#e7eaf0; border:1px solid #2a3040; border-radius:10px;
-      padding:8px 10px; font-size:14px;
+    :root {
+      color-scheme: dark;
+      --bg: #0b1220;
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(255,255,255,.08);
+      --stroke: rgba(255,255,255,.12);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.62);
+      --radius: 14px;
+      --radius2: 12px;
+      --gap: 12px;
+      --accent: #3b82f6;
+      --danger: #ef4444;
+      --success: #22c55e;
     }
-    .bar button.active { background:#3b82f6; color:#fff; border-color:#3b82f6; }
-    .tool-group { display:flex; gap:2px; border-radius:10px; overflow:hidden; border:1px solid #2a3040; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: var(--bg); color: var(--text); }
+    .app {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 78px 1fr;
+      grid-template-rows: auto 1fr;
+      gap: 14px;
+      padding: 14px;
+      min-height: 100vh;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+    }
+    .sidebar {
+      grid-column: 1 / 2;
+      grid-row: 1 / 3;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .tool-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
     .tool-group button {
-      width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center;
-      background:#171a21; color:#a1a1aa; border:none; border-right:1px solid #2a3040; cursor:pointer;
-      font-size:18px; line-height:1;
+      width: 100%;
+      height: 52px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      transition: background .15s ease, border-color .15s ease;
     }
-    .tool-group button:last-child { border-right:none; }
-    .tool-group button:hover { background:#252830; color:#e7eaf0; }
-    .tool-group button.active { background:#3b82f6; color:#fff; }
-    .color-group { display:flex; align-items:center; gap:6px; }
-    .color-group label { font-size:12px; color:#a1a1aa; }
-    .color-group input[type="color"] { width:36px; height:36px; padding:2px; cursor:pointer; border-radius:8px; }
-    .bar-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-    .bar-row .label { font-size:11px; color:#71717a; margin-right:2px; }
-    .swatch-group { display:flex; gap:4px; align-items:center; flex-wrap:wrap; }
-    .swatch { width:24px; height:24px; border-radius:6px; border:2px solid #3f3f46; cursor:pointer; padding:0; }
-    .swatch:hover { border-color:#71717a; transform:scale(1.1); }
-    .swatch.active { border-color:#3b82f6; box-shadow:0 0 0 1px #3b82f6; }
-    .bar select { min-width:70px; background:#171a21; color:#e7eaf0; border:1px solid #2a3040; border-radius:8px; padding:6px 8px; font-size:13px; }
-    .line-type-group { display:flex; gap:2px; border-radius:8px; overflow:hidden; border:1px solid #2a3040; }
-    .line-type-group button {
-      width:36px; height:36px; padding:0; border:none; background:#171a21; color:#a1a1aa; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
+    .tool-group button:hover { background: rgba(255,255,255,.09); color: var(--text); }
+    .tool-group button.active {
+      background: rgba(59,130,246,.18);
+      border-color: rgba(59,130,246,.55);
+      color: var(--text);
+      box-shadow: 0 10px 25px rgba(59,130,246,.15);
     }
-    .line-type-group button:hover { background:#252830; color:#e7eaf0; }
-    .line-type-group button.active { background:#3b82f6; color:#fff; }
-    .line-type-group .line-icon { width:20px; height:0; border-bottom:3px solid currentColor; }
+    .sidebar-canvas-actions {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .topbar {
+      grid-column: 2 / 3;
+      grid-row: 1 / 2;
+      display: flex;
+      align-items: stretch;
+      gap: 14px;
+    }
+    .styles {
+      flex: 1;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      overflow: hidden;
+      min-height: 64px;
+      flex-wrap: wrap;
+    }
+    .group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-right: 12px;
+      border-right: 1px solid rgba(255,255,255,.08);
+    }
+    .group:last-child { border-right: none; padding-right: 0; }
+    .group .label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+    .styles .select, .styles input[type="number"] {
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 600;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+    .styles .select { min-width: 72px; }
+    .styles input[type="number"] { width: 67px; }
+    .seg, .line-type-group {
+      display: flex;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .seg button, .line-type-group button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      min-width: 52px;
+      transition: background .15s ease, color .15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .seg button:hover, .line-type-group button:hover { background: rgba(255,255,255,.06); color: var(--text); }
+    .seg button.active, .line-type-group button.active { background: rgba(255,255,255,.1); color: var(--text); }
+    .line-type-group .line-icon { width: 20px; height: 0; border-bottom: 3px solid currentColor; }
     .line-type-group .line-icon-dashed { border-bottom-style: dashed; }
     .line-type-group .line-icon-dotted { border-bottom-style: dotted; border-bottom-width: 2px; }
-    .bar input[type="number"] { width:52px; background:#171a21; color:#e7eaf0; border:1px solid #2a3040; border-radius:8px; padding:6px 8px; font-size:13px; }
-    .bar input[type="text"] { min-width:120px; background:#171a21; color:#e7eaf0; border:1px solid #2a3040; border-radius:8px; padding:6px 8px; font-size:13px; }
-    .bar { flex-direction: column; align-items: flex-start; }
+    .group.colors { gap: 12px; }
+    .swatch-group {
+      display: grid;
+      grid-template-columns: repeat(5, 16px);
+      grid-auto-rows: 16px;
+      gap: 8px;
+      padding: 10px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+    }
+    .swatch {
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      border: 2px solid rgba(255,255,255,.18);
+      cursor: pointer;
+      padding: 0;
+      transition: transform .08s ease, border-color .15s ease;
+    }
+    .swatch:hover { transform: scale(1.08); border-color: rgba(255,255,255,.35); }
+    .swatch.active { border-color: rgba(255,255,255,.85); }
+    .picker-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.05);
+    }
+    .picker-wrap input[type="color"] {
+      width: 28px; height: 28px;
+      border: 0; padding: 0;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+    .actions {
+      width: 270px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 64px;
+    }
+    .actions .btn {
+      flex: 1;
+      justify-content: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      transition: background .15s ease, border-color .15s ease;
+      white-space: nowrap;
+    }
+    .actions .btn:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.18); }
+    .actions .btn.danger { background: rgba(239,68,68,.16); border-color: rgba(239,68,68,.45); }
+    .actions .btn.danger:hover { background: rgba(239,68,68,.22); }
+    .actions .btn.primary { background: rgba(34,197,94,.2); border-color: rgba(34,197,94,.5); color: #86efac; }
+    .actions .btn.primary:hover { background: rgba(34,197,94,.3); }
+    .actions .btn.ghost { background: transparent; border-color: rgba(255,255,255,.1); }
+    .actions .btn.ghost:hover { background: rgba(255,255,255,.06); }
+    .stage {
+      grid-column: 2 / 3;
+      grid-row: 2 / 3;
+      border-radius: var(--radius);
+      border: 1px dashed rgba(255,255,255,.18);
+      background: rgba(255,255,255,.03);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      min-height: 0;
+    }
+    .stage #wrap { flex: 1; display: flex; justify-content: center; align-items: center; overflow: auto; width: 100%; }
+    .stage .hint { opacity: .8; font-size: 12px; color: var(--muted); padding: 8px; }
     /* Dialog แก้ไขวัตถุที่เลือก - ลอยและลากย้ายได้ */
     #edit-dialog {
       display: none;
@@ -201,7 +392,7 @@
     #save-result-dialog .save-result-actions { display: flex; justify-content: flex-end; }
     #save-result-dialog .save-result-ok { padding: 8px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; border: none; background: #3b82f6; color: #fff; }
     #save-result-dialog .save-result-ok:hover { background: #2563eb; }
-    #wrap { height: calc(100vh - 100px); display:flex; justify-content:center; align-items:center; overflow: auto; }
+    #wrap { min-height: 200px; flex: 1; display: flex; justify-content: center; align-items: center; overflow: auto; width: 100%; }
     #canvas-zoom-wrap { display: inline-block; position: relative; transform-origin: center center; }
     #canvas-border-overlay { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 2; }
     #canvas-border-overlay.visible { pointer-events: auto; cursor: default; }
@@ -210,9 +401,9 @@
   </style>
 </head>
 <body>
-  <div class="bar">
-    <div class="bar-row">
-      <input id="file" type="file" accept="image/*">
+  <input id="file" type="file" accept="image/*" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
+  <div class="app">
+    <aside class="sidebar panel" aria-label="Tools">
       <div class="tool-group" id="tool-group" role="group" aria-label="เครื่องมือ">
         <button type="button" id="tool-arrow" title="Arrow" value="arrow">➤</button>
         <button type="button" id="tool-line" title="เส้นตรง" value="line">—</button>
@@ -223,50 +414,73 @@
         <button type="button" id="tool-pencil" title="ดินสอ วาดอิสระ" value="pencil">✎</button>
         <button type="button" id="tool-crop" title="Crop ภาพหลัก" value="crop">✂</button>
       </div>
-      <div id="crop-actions" class="bar-row" style="display:none;">
-        <button type="button" id="crop-apply">Crop</button>
-        <button type="button" id="crop-cancel">ยกเลิก</button>
+      <div class="tool-group sidebar-canvas-actions" role="group" aria-label="Canvas">
+        <button type="button" id="btn-resize-main" title="ย่อขยายภาพหลัก">↕</button>
+        <button type="button" id="btn-canvas-border" title="ปรับขนาดพื้นที่รูป (กว้าง × สูง)">⊞</button>
       </div>
-      <div id="resize-actions" class="bar-row" style="display:none;">
-        <span class="label">ย่อขยายภาพหลัก</span>
-        <input type="number" id="resize-percent" min="10" max="400" value="100" style="width:56px;"> %
-        <button type="button" id="resize-apply">ใช้</button>
+    </aside>
+
+    <header class="topbar">
+      <section class="styles panel" aria-label="Styles">
+        <div class="group">
+          <span class="label">Stroke</span>
+          <select class="select" id="line-size" title="ขนาดเส้น">
+            <option value="1">1 px</option>
+            <option value="2">2 px</option>
+            <option value="3">3 px</option>
+            <option value="4">4 px</option>
+            <option value="5">5 px</option>
+            <option value="8" selected>8 px</option>
+            <option value="12">12 px</option>
+          </select>
+          <div class="seg line-type-group" id="line-type-group" role="group" title="ชนิดเส้น">
+            <button type="button" class="line-type-btn active" value="solid" title="ทึบ">Solid</button>
+            <button type="button" class="line-type-btn" value="dashed" title="ประ">Dash</button>
+            <button type="button" class="line-type-btn" value="dotted" title="จุด">Dot</button>
+          </div>
+        </div>
+
+        <div class="group">
+          <span class="label">Font</span>
+          <input id="font-size" type="number" min="10" max="120" value="24" title="ขนาดตัวอักษร">
+        </div>
+
+        <div class="group colors">
+          <span class="label">Color</span>
+          <div class="swatch-group" id="swatch-stroke" aria-label="แม่สีเส้น"></div>
+          <div class="swatch-group" id="swatch-bg" aria-label="แม่สีพื้นหลัง"></div>
+          <div class="picker-wrap" title="เลือกสีเส้น">
+            <input id="color" type="color" value="#ef4444" title="เลือกสี">
+          </div>
+        </div>
+
+        <div id="crop-actions" class="group" style="display:none;">
+          <button type="button" id="crop-apply">Crop</button>
+          <button type="button" id="crop-cancel">ยกเลิก</button>
+        </div>
+        <div id="resize-actions" class="group" style="display:none;">
+          <span class="label">Resize</span>
+          <input type="number" id="resize-percent" min="10" max="400" value="100" style="width:56px;"> %
+          <button type="button" id="resize-apply">ใช้</button>
+        </div>
+      </section>
+
+      <section class="actions panel" aria-label="Actions">
+        <button type="button" class="btn ghost" id="undo">↶ Undo</button>
+        <button type="button" class="btn danger" id="btn-clear-all" title="ลบทุก item">✕ Clear</button>
+        <button type="button" class="btn primary" id="save">⬇ Save</button>
+      </section>
+    </header>
+
+    <main class="stage">
+      <div id="wrap">
+        <div id="canvas-zoom-wrap">
+          <canvas id="cv"></canvas>
+          <canvas id="canvas-border-overlay"></canvas>
+        </div>
       </div>
-      <button type="button" id="btn-resize-main" title="ย่อขยายภาพหลัก">Resize ภาพ</button>
-      <button type="button" id="btn-canvas-border" title="ปรับขนาดพื้นที่รูป (กว้าง × สูง)">ขอบพื้นที่รูป</button>
-      <button type="button" id="btn-clear-all" title="ลบทุก item (ลูกศร กล่อง ข้อความ ป้ายเลข ฯลฯ)">Clear all item</button>
-      <span class="label">สีเส้น</span>
-      <div class="swatch-group" id="swatch-stroke" aria-label="แม่สีเส้น"></div>
-      <span class="label">พื้นหลัง</span>
-      <div class="swatch-group" id="swatch-bg" aria-label="แม่สีพื้นหลัง"></div>
-      <div class="color-group">
-        <label for="color">สี</label>
-        <input id="color" type="color" value="#ef4444" title="เลือกสี">
-      </div>
-    </div>
-    <div class="bar-row">
-      <span class="label">ขนาดเส้น</span>
-      <select id="line-size" title="ขนาดเส้น">
-        <option value="1">1 px</option>
-        <option value="2">2 px</option>
-        <option value="3">3 px</option>
-        <option value="4">4 px</option>
-        <option value="5">5 px</option>
-        <option value="8" selected>8 px</option>
-        <option value="12">12 px</option>
-      </select>
-      <span class="label">ชนิดเส้น</span>
-      <div class="line-type-group" id="line-type-group" role="group" title="ชนิดเส้น">
-        <button type="button" class="line-type-btn active" value="solid" title="ทึบ"><span class="line-icon"></span></button>
-        <button type="button" class="line-type-btn" value="dashed" title="ประ"><span class="line-icon line-icon-dashed"></span></button>
-        <button type="button" class="line-type-btn" value="dotted" title="จุด"><span class="line-icon line-icon-dotted"></span></button>
-      </div>
-      <span class="label">ขนาด Font</span>
-      <input id="font-size" type="number" min="10" max="120" value="24" title="ขนาดตัวอักษร">
-      <button id="undo">Undo</button>
-      <button id="save">Save</button>
-    </div>
-    <span class="hint">วาด: ลาก | Text: คลิกวาง | Crop: เลือกเครื่องมือ ✂ ลากเลือกพื้นที่ แล้วกด Crop | Resize ภาพ: กดปุ่มแล้วใส่ % | รูป item: เลือกรูปแล้วปรับกว้าง×สูงใน dialog หรือลากมุม</span>
+      <span class="hint">วาด: ลาก | Text: คลิกวาง | Crop: เลือกเครื่องมือ ✂ ลากเลือกพื้นที่ แล้วกด Crop | Resize ภาพ: กดปุ่มแล้วใส่ % | รูป item: เลือกรูปแล้วปรับกว้าง×สูงใน dialog หรือลากมุม</span>
+    </main>
   </div>
 
   <div id="edit-dialog">
@@ -375,13 +589,6 @@ Left |   content   | Right
     </div>
   </div>
 
-  <div id="wrap">
-    <div id="canvas-zoom-wrap">
-      <canvas id="cv"></canvas>
-      <canvas id="canvas-border-overlay"></canvas>
-    </div>
-  </div>
-
 <script>
 const canvas = document.getElementById('cv');
 const ctx = canvas.getContext('2d');
@@ -457,7 +664,8 @@ function getPosFromClient(clientX, clientY) {
 }
 
 function lineWidth() { return lineSizePx; }
-function headLen() { return Math.max(14, canvas.width * 0.02); }
+/** ความยาวหัวลูกศร (ปรับตามความหนาเส้น) */
+function headLen(lw) { return Math.max(12, (lw != null ? lw : lineSizePx) * 4); }
 function fontSize() { return fontSizePx; }
 
 /** ถ้าเคยแก้เลขป้าย (nextLabelNumberSeq) จะนับจากนั้น 2,3,4... ไม่ก็ใช้ max+1 */
@@ -496,16 +704,25 @@ function drawShape(s, opts) {
   if (s.type === 'arrow') {
     const from = s.from, to = s.to;
     const angle = Math.atan2(to.y - from.y, to.x - from.x);
+    const ah = headLen(lw);
+    const tipX = to.x, tipY = to.y;
+    const inset = 0.75;
+    const baseX = tipX - ah * inset * Math.cos(angle);
+    const baseY = tipY - ah * inset * Math.sin(angle);
     ctx.strokeStyle = c; ctx.fillStyle = c;
     ctx.lineWidth = Math.max(2, lw);
     ctx.setLineDash(dash);
-    ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(baseX, baseY);
+    ctx.stroke();
     ctx.setLineDash([]);
     ctx.beginPath();
-    ctx.moveTo(to.x, to.y);
-    ctx.lineTo(to.x - headLen()*Math.cos(angle-Math.PI/6), to.y - headLen()*Math.sin(angle-Math.PI/6));
-    ctx.lineTo(to.x - headLen()*Math.cos(angle+Math.PI/6), to.y - headLen()*Math.sin(angle+Math.PI/6));
-    ctx.closePath(); ctx.fill();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(tipX - ah*Math.cos(angle-Math.PI/6), tipY - ah*Math.sin(angle-Math.PI/6));
+    ctx.lineTo(tipX - ah*Math.cos(angle+Math.PI/6), tipY - ah*Math.sin(angle+Math.PI/6));
+    ctx.closePath();
+    ctx.fill();
   } else if (s.type === 'line') {
     const from = s.from, to = s.to;
     ctx.strokeStyle = c;
@@ -1228,7 +1445,7 @@ function applyEditToSelected() {
   }
   s.color = document.getElementById('edit-color').value;
   s.lineWidth = parseInt(document.getElementById('edit-line-size').value, 10) || 3;
-  s.lineType = document.querySelector('#edit-line-type-group .line-type-btn.active')?.value || 'solid';
+  var _el = document.querySelector('#edit-line-type-group .line-type-btn.active'); s.lineType = (_el && _el.value) || 'solid';
   if (s.type === 'highlight') s.colorBg = document.getElementById('edit-color-bg').value;
   if (s.type === 'text') {
     applyEditTextFontToSelected();
@@ -1238,14 +1455,14 @@ function applyEditToSelected() {
 }
 
 function applyEditTextFontToSelected() {
-  if (selectedIndex < 0 || shapes[selectedIndex]?.type !== 'text') return;
+  if (selectedIndex < 0 || !shapes[selectedIndex] || shapes[selectedIndex].type !== 'text') return;
   const s = shapes[selectedIndex];
   s.fontSize = parseInt(document.getElementById('edit-font-size').value, 10) || 24;
   s.text = document.getElementById('edit-text-content').value;
 }
 
 function applyEditTextBorderToSelected() {
-  if (selectedIndex < 0 || shapes[selectedIndex]?.type !== 'text') return;
+  if (selectedIndex < 0 || !shapes[selectedIndex] || shapes[selectedIndex].type !== 'text') return;
   const s = shapes[selectedIndex];
   const borderRadio = document.querySelector('input[name="edit-text-border"]:checked');
   s.borderStyle = (borderRadio && borderRadio.value) || 'none';
@@ -1331,7 +1548,7 @@ document.getElementById('font-size').oninput = document.getElementById('font-siz
   if (img) fullRedraw();
 };
 lineSizePx = parseInt(document.getElementById('line-size').value, 10) || 8;
-lineType = document.querySelector('#line-type-group .line-type-btn.active')?.value || 'solid';
+var _lt = document.querySelector('#line-type-group .line-type-btn.active'); lineType = (_lt && _lt.value) || 'solid';
 fontSizePx = parseInt(document.getElementById('font-size').value, 10) || 24;
 
 function closeEditDialogAndDeselect() {
@@ -1555,10 +1772,10 @@ document.getElementById('edit-delete').addEventListener('click', () => {
 });
 
 (function initTextDialog() {
-  const dialog = document.getElementById('text-dialog');
-  const input = document.getElementById('text-dialog-input');
-  const btnOk = document.getElementById('text-dialog-ok');
-  const btnCancel = document.getElementById('text-dialog-cancel');
+  const dialog = document.getElementById("text-dialog");
+  const input = document.getElementById("text-dialog-input");
+  const btnOk = document.getElementById("text-dialog-ok");
+  const btnCancel = document.getElementById("text-dialog-cancel");
   function closeTextDialog() {
     dialog.classList.remove('visible');
     pendingTextPos = null;
@@ -1566,14 +1783,15 @@ document.getElementById('edit-delete').addEventListener('click', () => {
   btnCancel.addEventListener('click', closeTextDialog);
   document.querySelectorAll('#text-dialog input[name="text-border"]').forEach(function (r) {
     r.addEventListener('change', function () {
-      const v = document.querySelector('#text-dialog input[name="text-border"]:checked')?.value;
+      const el = document.querySelector('#text-dialog input[name="text-border"]:checked');
+      const v = el ? el.value : null;
       document.getElementById('text-dialog-bg-wrap').style.display = (v && v !== 'none') ? '' : 'none';
     });
   });
   btnOk.addEventListener('click', function () {
     const t = (input.value || '').trim();
-    const borderRadio = document.querySelector('#text-dialog input[name="text-border"]:checked');
-    const borderStyle = (borderRadio && borderRadio.value) || 'none';
+    var borderRadio = document.querySelector('#text-dialog input[name="text-border"]:checked');
+    var borderStyle = (borderRadio && borderRadio.value) || 'none';
     const pos = pendingTextPos;
     const colorBg = (borderStyle !== 'none') ? (document.getElementById('text-dialog-bg').value || '#1a1a1e') : undefined;
     closeTextDialog();
@@ -1617,8 +1835,9 @@ document.getElementById('edit-text-content').oninput = document.getElementById('
 };
 document.querySelectorAll('input[name="edit-text-border"]').forEach(function (r) {
   r.addEventListener('change', function () {
-    const v = document.querySelector('input[name="edit-text-border"]:checked')?.value;
-    const show = selectedIndex >= 0 && shapes[selectedIndex]?.type === 'text' && v && v !== 'none';
+    var _cr = document.querySelector('input[name="edit-text-border"]:checked');
+    var v = _cr ? _cr.value : null;
+    var show = selectedIndex >= 0 && shapes[selectedIndex] && shapes[selectedIndex].type === 'text' && v && v !== 'none';
     document.getElementById('edit-text-bg-label').style.display = show ? '' : 'none';
     document.getElementById('edit-text-bg').style.display = show ? '' : 'none';
     applyEditTextBorderToSelected();
