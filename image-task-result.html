@@ -1445,6 +1445,7 @@
       if (input) input.value = text || '';
     }
 
+    var allowUrlHashUpdateFromScroll = true;
     function buildTaskDescriptionNav() {
       var list = document.getElementById('task-description-nav-list');
       if (!list) return;
@@ -1496,8 +1497,10 @@
         var id = window.location.hash.replace(/^#/, '');
         var el = document.getElementById(id);
         if (el) {
+          allowUrlHashUpdateFromScroll = false;
           el.scrollIntoView({ behavior: 'auto', block: 'start' });
           requestAnimationFrame(updateTaskDescriptionNavHighlight);
+          setTimeout(function () { allowUrlHashUpdateFromScroll = true; }, 600);
         }
       }
     }
@@ -1538,7 +1541,7 @@
       items.forEach(function (item) {
         item.classList.toggle('task-description-nav-item-active', item.getAttribute('data-target-id') === targetId);
       });
-      if (targetId && window.location.hash.replace(/^#/, '') !== targetId) {
+      if (allowUrlHashUpdateFromScroll && targetId && window.location.hash.replace(/^#/, '') !== targetId) {
         try {
           window.history.replaceState(null, '', (window.location.pathname + window.location.search) + '#' + targetId);
         } catch (e) {}
@@ -2572,6 +2575,7 @@
           var params = new URLSearchParams(window.location.search);
           params.set('n', projectName);
           var url = window.location.pathname + '?' + params.toString();
+          if (window.location.hash) url += window.location.hash;
           history.replaceState(null, '', url);
         } catch (e) {}
       }
@@ -3023,7 +3027,11 @@
           requestAnimationFrame(function () { updateTaskDescriptionNavHighlight(); });
         }
       }
-      if (window.location.hash) scrollToHash();
+      if (window.location.hash) {
+        allowUrlHashUpdateFromScroll = false;
+        scrollToHash();
+        setTimeout(function () { allowUrlHashUpdateFromScroll = true; }, 600);
+      }
       window.addEventListener('hashchange', scrollToHash);
       if (navEl) {
         var wheelLast = 0;
