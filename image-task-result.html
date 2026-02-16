@@ -22,6 +22,17 @@
       margin-bottom: 24px;
       flex-wrap: wrap;
     }
+    .page-header .switch-public-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      margin-right: 12px;
+      font-size: 0.875rem;
+      color: #a1a1aa;
+    }
+    .page-header .switch-public-label { user-select: none; }
+    .page-header .switch-public { width: 40px; height: 22px; cursor: pointer; accent-color: #3b82f6; }
     .page-header h1 {
       font-size: 1.5rem;
       font-weight: 600;
@@ -961,6 +972,10 @@
   <div class="main-content">
   <div class="page-header">
     <h1>Image Task & Result</h1>
+    <label class="switch-public-wrap" id="switch-public-wrap" style="display:none;">
+      <span class="switch-public-label">เปิดสาธารณะ</span>
+      <input type="checkbox" id="switch-public" class="switch-public" title="Update global JSON และเปิดหน้าเช็ค">
+    </label>
     <button type="button" class="btn-logout" id="btn-logout">Logout</button>
   </div>
 
@@ -1288,6 +1303,18 @@
       var thumbs = bar.querySelectorAll('.img-bar-thumb');
       return Array.from(thumbs).map(function (t) { return t.getAttribute('data-key'); }).filter(Boolean);
     }
+    function nextBarKey(baseKey, usedKeys) {
+      var max = -1;
+      if (usedKeys[baseKey]) max = 0;
+      Object.keys(usedKeys).forEach(function (k) {
+        if (k === baseKey) max = Math.max(max, 0);
+        else if (k.indexOf(baseKey + '_') === 0) {
+          var n = parseInt(k.slice((baseKey + '_').length), 10);
+          if (!isNaN(n)) max = Math.max(max, n);
+        }
+      });
+      return max < 0 ? baseKey : baseKey + '_' + (max + 1);
+    }
 
     function setBarSelectedIndex(bar, index) {
       if (!bar) return;
@@ -1342,7 +1369,7 @@
       addImageActions(box);
     }
 
-    function addBarThumb(bar, key, filename, previewUrl) {
+    function addBarThumb(bar, key, filename, previewUrl, insertIndex) {
       var bases = getDataAndImageBase();
       var imageBase = bases.imageBase;
       if (imageBase.length && imageBase.charAt(imageBase.length - 1) !== '/') imageBase += '/';
@@ -1363,7 +1390,12 @@
       btnDel.title = 'Delete';
       btnDel.innerHTML = '&#10005;';
       thumb.appendChild(btnDel);
-      container.appendChild(thumb);
+      if (insertIndex !== undefined && insertIndex !== null && insertIndex >= 0) {
+        var ref = container.children[insertIndex] || null;
+        container.insertBefore(thumb, ref);
+      } else {
+        container.appendChild(thumb);
+      }
       if (!bar.hasAttribute('data-selected-index')) setBarSelectedIndex(bar, 0);
     }
 
@@ -1623,8 +1655,14 @@
         var resultBar = getBarForBox(resultImgBox);
         var taskCommentsEl = block.querySelector('[data-role="task-comments"]');
         var resultCommentsEl = block.querySelector('[data-role="result-comments"]');
-        var taskKeys = tasks[i].taskImageKeys || (tasks[i].taskImage ? [tasks[i].taskImage] : []);
-        var resultKeys = tasks[i].resultImageKeys || (tasks[i].resultImage ? [tasks[i].resultImage] : []);
+        var taskKeysRaw = tasks[i].taskImageKeys || (tasks[i].taskImage ? [tasks[i].taskImage] : []);
+        var resultKeysRaw = tasks[i].resultImageKeys || (tasks[i].resultImage ? [tasks[i].resultImage] : []);
+        var taskKeys = [];
+        var taskSeen = {};
+        taskKeysRaw.forEach(function (k) { if (k && !taskSeen[k]) { taskSeen[k] = true; taskKeys.push(k); } });
+        var resultKeys = [];
+        var resultSeen = {};
+        resultKeysRaw.forEach(function (k) { if (k && !resultSeen[k]) { resultSeen[k] = true; resultKeys.push(k); } });
         if (taskBar && taskKeys.length) {
           taskKeys.forEach(function (k) {
             var fn = imageIndex[k];
@@ -1662,6 +1700,8 @@
       }
       container.querySelectorAll('.block').forEach(bindBlockEvents);
       buildTaskDescriptionNav();
+      var switchPublic = document.getElementById('switch-public');
+      if (switchPublic) switchPublic.checked = !!(data.publicGlobal);
     }
 
     function loadDataFromJson() {
@@ -1923,16 +1963,21 @@
         });
     }
 
-    function uploadImageToBar(file, bar, blockIndex, side) {
-      if (!file || !file.type.startsWith('image/')) return;
+    function uploadImageToBar(file, bar, blockIndex, side, explicitIndex) {
+      if (!file || !file.type.startsWith('image/')) return Promise.resolve();
       var baseKey = side + '_' + blockIndex;
-      var nextIdx = parseInt(bar.getAttribute('data-next-index') || '0', 10);
+      var nextIdx;
+      if (explicitIndex !== undefined && explicitIndex !== null && explicitIndex >= 0) {
+        nextIdx = explicitIndex;
+      } else {
+        nextIdx = parseInt(bar.getAttribute('data-next-index') || '0', 10);
+        bar.setAttribute('data-next-index', String(nextIdx + 1));
+      }
       var key = nextIdx === 0 ? baseKey : baseKey + '_' + nextIdx;
-      bar.setAttribute('data-next-index', String(nextIdx + 1));
       var form = new FormData();
       form.append('image', file);
       bar.classList.add('uploading');
-      fetch(UPLOAD_URL, { method: 'POST', body: form })
+      return fetch(UPLOAD_URL, { method: 'POST', body: form })
         .then(function (r) {
           if (!r.ok) throw new Error('Upload failed');
           return r.json();
@@ -1941,7 +1986,7 @@
           var filename = data.filename;
           bar.classList.remove('uploading');
           var previewUrl = URL.createObjectURL(file);
-          addBarThumb(bar, key, filename, previewUrl);
+          addBarThumb(bar, key, filename, previewUrl, nextIdx);
           var box = getBoxForBar(bar);
           if (box && nextIdx === 0) {
             setBarSelectedIndex(bar, 0);
@@ -1951,7 +1996,9 @@
         })
         .catch(function (err) {
           bar.classList.remove('uploading');
+          bar.setAttribute('data-next-index', String(nextIdx));
           alert('Upload failed: ' + (err.message || err));
+          throw err;
         });
     }
 
@@ -2004,8 +2051,16 @@
             var files = e.dataTransfer.files;
             if (!files || !files.length) return;
             if (bar) {
+              var imageFiles = [];
               for (var i = 0; i < files.length; i++) {
-                if (files[i].type.startsWith('image/')) uploadImageToBar(files[i], bar, blockIndex, side);
+                if (files[i].type.startsWith('image/')) imageFiles.push(files[i]);
+              }
+              if (!imageFiles.length) return;
+              var startIdx = parseInt(bar.getAttribute('data-next-index') || '0', 10);
+              bar.setAttribute('data-next-index', String(startIdx + imageFiles.length));
+              var p = Promise.resolve();
+              for (var j = 0; j < imageFiles.length; j++) {
+                p = p.then(function (f, idx) { return uploadImageToBar(f, bar, blockIndex, side, idx); }.bind(null, imageFiles[j], startIdx + j));
               }
             } else {
               var file = files[0];
@@ -2047,10 +2102,18 @@
         if (input) input.addEventListener('change', function () {
           var files = input.files;
           if (!files || !files.length) return;
+          var imageFiles = [];
           for (var i = 0; i < files.length; i++) {
-            if (files[i].type.startsWith('image/')) uploadImageToBar(files[i], bar, blockIndex, side);
+            if (files[i].type.startsWith('image/')) imageFiles.push(files[i]);
           }
-          input.value = '';
+          if (!imageFiles.length) return;
+          var startIdx = parseInt(bar.getAttribute('data-next-index') || '0', 10);
+          bar.setAttribute('data-next-index', String(startIdx + imageFiles.length));
+          var p = Promise.resolve();
+          for (var j = 0; j < imageFiles.length; j++) {
+            p = p.then(function (f, idx) { return uploadImageToBar(f, bar, blockIndex, side, idx); }.bind(null, imageFiles[j], startIdx + j));
+          }
+          p.then(function () { input.value = ''; });
         });
         bar.addEventListener('dragover', function (e) {
           e.preventDefault(); e.stopPropagation();
@@ -2064,8 +2127,16 @@
           e.preventDefault(); e.stopPropagation(); bar.classList.remove('drag-over');
           var files = e.dataTransfer.files;
           if (!files || !files.length) return;
+          var imageFiles = [];
           for (var i = 0; i < files.length; i++) {
-            if (files[i].type.startsWith('image/')) uploadImageToBar(files[i], bar, blockIndex, side);
+            if (files[i].type.startsWith('image/')) imageFiles.push(files[i]);
+          }
+          if (!imageFiles.length) return;
+          var startIdx = parseInt(bar.getAttribute('data-next-index') || '0', 10);
+          bar.setAttribute('data-next-index', String(startIdx + imageFiles.length));
+          var p = Promise.resolve();
+          for (var j = 0; j < imageFiles.length; j++) {
+            p = p.then(function (f, idx) { return uploadImageToBar(f, bar, blockIndex, side, idx); }.bind(null, imageFiles[j], startIdx + j));
           }
         });
         var thumbsEl = bar.querySelector('.img-bar-thumbs');
@@ -2129,26 +2200,48 @@
         var resultBar = getBarForBox(resultImgBox);
         var taskComments = block.querySelector('[data-role="task-comments"]');
         var resultComments = block.querySelector('[data-role="result-comments"]');
-        var taskKeys = taskBar ? getBarImageKeys(taskBar) : [];
-        var resultKeys = resultBar ? getBarImageKeys(resultBar) : [];
-        var taskKey = taskKeys[0] || ('task_' + i);
-        var resultKey = resultKeys[0] || ('result_' + i);
+        var taskBaseKey = 'task_' + i;
+        var resultBaseKey = 'result_' + i;
+        var taskKeys = [];
+        var taskUsed = {};
         if (taskBar) {
           taskBar.querySelectorAll('.img-bar-thumb').forEach(function (t) {
             var k = t.getAttribute('data-key');
             var f = t.getAttribute('data-filename');
-            if (k && f) imageIndex[k] = f;
+            if (!k || !f) return;
+            if (taskUsed[k]) {
+              k = nextBarKey(taskBaseKey, taskUsed);
+              t.setAttribute('data-key', k);
+            }
+            taskUsed[k] = true;
+            imageIndex[k] = f;
+            taskKeys.push(k);
           });
-        } else if (taskImgBox && getImgBoxFilename(taskImgBox)) {
+          taskBar.setAttribute('data-next-index', String(taskKeys.length));
+        }
+        var taskKey = taskKeys[0] || taskBaseKey;
+        if (!taskBar && taskImgBox && getImgBoxFilename(taskImgBox)) {
           imageIndex[taskKey] = getImgBoxFilename(taskImgBox);
         }
+        var resultKeys = [];
+        var resultUsed = {};
         if (resultBar) {
           resultBar.querySelectorAll('.img-bar-thumb').forEach(function (t) {
             var k = t.getAttribute('data-key');
             var f = t.getAttribute('data-filename');
-            if (k && f) imageIndex[k] = f;
+            if (!k || !f) return;
+            if (resultUsed[k]) {
+              k = nextBarKey(resultBaseKey, resultUsed);
+              t.setAttribute('data-key', k);
+            }
+            resultUsed[k] = true;
+            imageIndex[k] = f;
+            resultKeys.push(k);
           });
-        } else if (resultImgBox && getImgBoxFilename(resultImgBox)) {
+          resultBar.setAttribute('data-next-index', String(resultKeys.length));
+        }
+        var resultKey = resultKeys[0] || resultBaseKey;
+        if (!resultBar && resultImgBox && getImgBoxFilename(resultImgBox)) {
           imageIndex[resultKey] = getImgBoxFilename(resultImgBox);
         }
         tasks.push({
@@ -2171,6 +2264,8 @@
         out.projectId = currentProjectId;
         out.passkey = currentPasskey;
       }
+      var switchPublicEl = document.getElementById('switch-public');
+      out.publicGlobal = !!(switchPublicEl && switchPublicEl.checked);
       return out;
     }
 
@@ -2397,8 +2492,49 @@
       var selectedProjectName = '';
       if (!gate || !cardsContainer) return;
 
+      var params = new URLSearchParams(window.location.search);
+      var hasN = params.get('n');
+      if (params.get('public') === '1' && hasN) {
+        var prefix = getApiPrefix();
+        var dataUrl = prefix + '/api/data';
+        fetch(dataUrl + (dataUrl.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now())
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(r.statusText)); })
+          .then(function (data) {
+            if (data && data.tasks && data.tasks.length) {
+              applyProjectData(data);
+              gate.classList.add('hidden');
+              var wrap = document.getElementById('switch-public-wrap');
+              if (wrap) wrap.style.display = 'none';
+              var logoutBtn = document.getElementById('btn-logout');
+              if (logoutBtn) logoutBtn.style.display = 'none';
+            }
+          })
+          .catch(function () {});
+        return;
+      }
+
       function hideGate() {
         gate.classList.add('hidden');
+        var wrap = document.getElementById('switch-public-wrap');
+        if (wrap) wrap.style.display = 'inline-flex';
+      }
+
+      function hideGatePublicView() {
+        gate.classList.add('hidden');
+        var wrap = document.getElementById('switch-public-wrap');
+        if (wrap) wrap.style.display = 'none';
+        var logoutBtn = document.getElementById('btn-logout');
+        if (logoutBtn) logoutBtn.style.display = 'none';
+      }
+
+      function updateUrlForProject(projectName) {
+        if (!projectName) return;
+        try {
+          var params = new URLSearchParams(window.location.search);
+          params.set('n', projectName);
+          var url = window.location.pathname + '?' + params.toString();
+          history.replaceState(null, '', url);
+        } catch (e) {}
       }
 
       function fetchProjects() {
@@ -2580,6 +2716,7 @@
                 sessionStorage.setItem('passkey_' + projectId, passkey);
               } catch (e) {}
               applyProjectData(res.data);
+              updateUrlForProject(selectedProjectName);
               closePasskeyDialog();
               hideGate();
             })
@@ -2623,6 +2760,7 @@
           })
           .then(function (res) {
             if (res && res.projects) fillProjectCards(res.projects);
+            updateUrlForProject(name);
             hideGate();
           })
           .catch(function (err) {
@@ -2655,15 +2793,114 @@
             currentPasskey = savedPasskey;
             applyProjectData(res.data);
             hideGate();
+            fetchProjects().then(function (list) {
+              var proj = (list.projects || []).find(function (p) { return p.id === lastId; });
+              if (proj && (proj.name || proj.id)) updateUrlForProject(proj.name || proj.id);
+            }).catch(function () {});
           })
           .catch(function () {
             /* show gate with project cards; user can pick project and enter passkey in dialog */
           });
       }
 
+      function openPasskeyDialogForProject(projectId, projectName) {
+        selectedProjectId = projectId;
+        selectedProjectName = projectName || projectId;
+        if (passkeyTitle) passkeyTitle.textContent = 'Enter Passkey — ' + selectedProjectName;
+        if (passkeyInput) { passkeyInput.value = ''; passkeyInput.focus(); }
+        if (passkeyError) { passkeyError.textContent = ''; passkeyError.style.display = 'none'; }
+        if (passkeyOverlay) passkeyOverlay.classList.add('active');
+      }
+
+      function tryLoadWithPasskey(projectId, passkey) {
+        var prefix = getApiPrefix();
+        return fetch(prefix + '/api/load-project', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: projectId, passkey: passkey })
+        })
+          .then(function (r) {
+            if (r.status === 403) throw new Error('Invalid passkey');
+            if (!r.ok) throw new Error(r.statusText);
+            return r.json();
+          })
+          .then(function (res) {
+            if (!res.ok || !res.data) throw new Error('No data');
+            return res.data;
+          });
+      }
+
+      function tryLoadPublicData() {
+        var prefix = getApiPrefix();
+        return fetch(prefix + '/api/data?t=' + Date.now())
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(r.statusText)); });
+      }
+
       fetchProjects().then(function (res) {
-        fillProjectCards(res.projects || []);
-        tryLoadFromSession();
+        var projects = res.projects || [];
+        fillProjectCards(projects);
+        var params = new URLSearchParams(window.location.search);
+        var nameParam = params.get('n');
+        if (nameParam) {
+          var name = decodeURIComponent(nameParam).trim();
+          var project = projects.find(function (p) { return (p.name || '').trim() === name; });
+          if (project) {
+            var savedPasskey = null;
+            try {
+              savedPasskey = sessionStorage.getItem('passkey_' + project.id);
+            } catch (e) {}
+            var isPublic = (project.public || '0') === '1';
+            if (savedPasskey !== null && savedPasskey !== undefined) {
+              tryLoadWithPasskey(project.id, savedPasskey)
+                .then(function (data) {
+                  currentProjectId = project.id;
+                  currentPasskey = savedPasskey;
+                  applyProjectData(data);
+                  updateUrlForProject(project.name || project.id);
+                  hideGate();
+                })
+                .catch(function () {
+                  if (isPublic) {
+                    tryLoadPublicData()
+                      .then(function (data) {
+                        if (data && data.tasks && data.tasks.length) {
+                          applyProjectData(data);
+                          hideGatePublicView();
+                        } else {
+                          openPasskeyDialogForProject(project.id, project.name || project.id);
+                        }
+                      })
+                      .catch(function () {
+                        openPasskeyDialogForProject(project.id, project.name || project.id);
+                      });
+                  } else {
+                    openPasskeyDialogForProject(project.id, project.name || project.id);
+                  }
+                });
+            } else {
+              if (isPublic) {
+                tryLoadPublicData()
+                  .then(function (data) {
+                    if (data && data.tasks && data.tasks.length) {
+                      applyProjectData(data);
+                      hideGatePublicView();
+                    } else {
+                      openPasskeyDialogForProject(project.id, project.name || project.id);
+                    }
+                  })
+                  .catch(function () {
+                    openPasskeyDialogForProject(project.id, project.name || project.id);
+                  });
+              } else {
+                openPasskeyDialogForProject(project.id, project.name || project.id);
+              }
+            }
+          } else {
+            tryLoadFromSession();
+          }
+        } else {
+          tryLoadFromSession();
+        }
       }).catch(function () {
         fillProjectCards([]);
       });
@@ -2677,6 +2914,33 @@
             if (lastId) sessionStorage.removeItem('passkey_' + lastId);
           } catch (e) {}
           gate.classList.remove('hidden');
+          var wrap = document.getElementById('switch-public-wrap');
+          if (wrap) wrap.style.display = 'none';
+        });
+      }
+
+      var switchPublic = document.getElementById('switch-public');
+      if (switchPublic) {
+        switchPublic.addEventListener('change', function () {
+          var projectId = currentProjectId;
+          var passkey = currentPasskey;
+          if (!projectId || passkey === undefined) return;
+          var isChecked = this.checked;
+          var prevChecked = !isChecked;
+          var prefix = getApiPrefix();
+          fetch(prefix + '/api/publish-global', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectId: projectId, passkey: passkey, public: isChecked })
+          })
+            .then(function (r) {
+              if (!r.ok) throw new Error(r.statusText);
+              return r.json();
+            })
+            .then(function () {})
+            .catch(function () {
+              switchPublic.checked = prevChecked;
+            });
         });
       }
     }

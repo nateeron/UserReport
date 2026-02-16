@@ -20,6 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent
 IMAGE_DIR = BASE_DIR / "image"
 REPORTS_DIR = BASE_DIR / "reports"
 DATA_JSON_PATH = BASE_DIR / "data.json"
+PUBLIC_DATA_PATH = BASE_DIR / "public_data.json"
 
 DEFAULT_PROJECT_DATA = {
     "savedAt": "",
@@ -197,7 +198,7 @@ def api_list_projects():
     try:
         data = read_data_file()
         projects = data.get("projects") or []
-        out = [{"id": p.get("id"), "name": p.get("name", "Unnamed")} for p in projects if p.get("id")]
+        out = [{"id": p.get("id"), "name": p.get("name", "Unnamed"), "public": p.get("public") or "0"} for p in projects if p.get("id")]
         return jsonify({"projects": out})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -218,7 +219,9 @@ def api_load_project():
             if p.get("id") == project_id:
                 if p.get("passkeyHash") != passkey_hash(passkey):
                     return jsonify({"error": "Invalid passkey"}), 403
-                return jsonify({"ok": True, "data": p.get("data") or DEFAULT_PROJECT_DATA})
+                out_data = dict(p.get("data") or DEFAULT_PROJECT_DATA)
+                out_data["publicGlobal"] = p.get("public") == "1"
+                return jsonify({"ok": True, "data": out_data})
         return jsonify({"error": "Project not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -297,6 +300,10 @@ def save_report():
                 if p.get("passkeyHash") != passkey_hash(passkey):
                     return jsonify({"error": "Invalid passkey"}), 403
                 old_data = p.get("data") or {}
+                if "publicGlobal" in data:
+                    payload["publicGlobal"] = bool(data.get("publicGlobal"))
+                else:
+                    payload["publicGlobal"] = bool(old_data.get("publicGlobal", False))
                 old_index = old_data.get("imageIndex") or {}
                 new_index = payload.get("imageIndex") or {}
                 old_filenames = set(old_index.values())
@@ -344,19 +351,72 @@ def serve_data_json():
     return send_from_directory(BASE_DIR, "data.json")
 
 
+def read_public_data():
+    """อ่าน public_data.json (ข้อมูลสาธารณะที่ publish แล้ว)"""
+    if not PUBLIC_DATA_PATH.exists():
+        return None
+    try:
+        with open(PUBLIC_DATA_PATH, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        if isinstance(raw, dict) and "tasks" in raw:
+            return raw
+    except Exception:
+        pass
+    return None
+
+
 @app.route("/api/data", methods=["GET"])
 @app.route("/api/data/", methods=["GET"])
 def api_get_data():
-    """โหลดข้อมูล (backward compat: คืน project แรกถ้ามีเดียว ไม่ตรวจ passkey)"""
+    """โหลดข้อมูล: ถ้ามี project ที่ public=1 ใน data.json คืนนั้น ไม่ก็ public_data.json / project แรก / default"""
     try:
         data = read_data_file()
         projects = data.get("projects") or []
+        for p in projects:
+            if p.get("public") == "1":
+                return jsonify(p.get("data") or DEFAULT_PROJECT_DATA)
+        public = read_public_data()
+        if public is not None:
+            return jsonify(public)
         if len(projects) == 1:
             return jsonify(projects[0].get("data") or DEFAULT_PROJECT_DATA)
         return jsonify(DEFAULT_PROJECT_DATA)
     except Exception as e:
         print("[Load data] Error:", e)
         return jsonify(DEFAULT_PROJECT_DATA)
+
+
+@app.route("/api/publish-global", methods=["OPTIONS"])
+def publish_global_options():
+    resp = make_response("", 200)
+    resp.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return resp
+
+
+@app.route("/api/publish-global", methods=["POST"])
+def api_publish_global():
+    """อัปเดต data.json เท่านั้น: ตั้ง project.public = \"1\" หรือ \"0\" ตาม body.public (ไม่สร้าง public_data.json)"""
+    body = request.get_json(force=True, silent=True) or {}
+    project_id = body.get("projectId")
+    passkey = body.get("passkey", "")
+    is_public = body.get("public", True)
+    if not project_id:
+        return jsonify({"error": "projectId required"}), 400
+    try:
+        data = read_data_file()
+        for p in data.get("projects") or []:
+            if p.get("id") == project_id:
+                if p.get("passkeyHash") != passkey_hash(passkey):
+                    return jsonify({"error": "Invalid passkey"}), 403
+                p["public"] = "1" if is_public else "0"
+                write_data_file(data)
+                print("[Publish global] data.json project.public=%s, project=%s" % (p["public"], project_id))
+                return jsonify({"ok": True})
+        return jsonify({"error": "Project not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
