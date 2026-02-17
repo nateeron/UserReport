@@ -5,14 +5,18 @@
       "name": "test",
       "passkeyHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
       "data": {
-        "savedAt": "2/17/2026, 12:09:21 AM",
+        "savedAt": "2/17/2026, 11:01:07 AM",
         "imageIndex": {
+          "task_0_1": "19563a99-29dc-4fb8-b6c7-4364b1cd4352.png",
           "task_1_1": "08f7495e-5d1f-457a-96a0-1a554601c866.jpg"
         },
         "tasks": [
           {
-            "taskImage": "task_0",
+            "taskImage": "task_0_1",
             "resultImage": "result_0",
+            "taskImageKeys": [
+              "task_0_1"
+            ],
             "taskDescription": "index #1",
             "resultDescription": "index #2",
             "taskComments": [],

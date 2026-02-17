@@ -1,0 +1,3 @@
+# Install these only when building .exe (on a machine that has Python)
+-r requirements.txt
+pyinstaller>=5.0

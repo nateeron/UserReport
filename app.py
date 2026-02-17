@@ -4,6 +4,7 @@ Python API backend: upload images, save report. Data แยกระดับ Pr
 import hashlib
 import os
 import re
+import sys
 import json
 import uuid
 from datetime import datetime
@@ -16,7 +17,11 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__, static_folder=".", static_url_path="")
 CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type"]}})
 
-BASE_DIR = Path(__file__).resolve().parent
+# When built as .exe (PyInstaller), use the folder containing the executable so image/, data.json, *.html are found
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).resolve().parent
+else:
+    BASE_DIR = Path(__file__).resolve().parent
 IMAGE_DIR = BASE_DIR / "image"
 REPORTS_DIR = BASE_DIR / "reports"
 DATA_JSON_PATH = BASE_DIR / "data.json"
@@ -171,6 +176,11 @@ def index():
 @app.route("/image-task-result.html")
 def page():
     return send_from_directory(BASE_DIR, "image-task-result.html")
+
+
+@app.route("/editimage.html")
+def editimage_page():
+    return send_from_directory(BASE_DIR, "editimage.html")
 
 
 @app.route("/api/upload", methods=["POST"])

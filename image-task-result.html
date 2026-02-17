@@ -2204,7 +2204,9 @@
             if (thumb) {
               var thumbs = bar.querySelectorAll('.img-bar-thumb');
               var idx = Array.from(thumbs).indexOf(thumb);
-              if (idx >= 0) removeImageFromBar(bar, idx);
+              if (idx >= 0) {
+                showConfirmDeleteDialog('Delete this image from the bar?', function () { removeImageFromBar(bar, idx); });
+              }
             }
             return;
           }
@@ -2385,15 +2387,25 @@
         if (e.data && e.data.type === 'editimage-saved' && window._editImageBox) {
           var box = window._editImageBox;
           var img = box && box.querySelector('img');
+          var ver = String(Date.now());
           if (img) {
-            var ver = String(Date.now());
             box.setAttribute('data-versionimage', ver);
             var filename = getImgBoxFilename(box);
             if (filename) {
               var bases = getDataAndImageBase();
               var imageBase = bases.imageBase;
               if (imageBase.length && imageBase.charAt(imageBase.length - 1) !== '/') imageBase += '/';
-              img.src = imageBase + filename + '?v=' + ver;
+              var newSrc = imageBase + filename + '?v=' + ver;
+              img.src = newSrc;
+              var bar = getBarForBox(box);
+              if (bar) {
+                bar.querySelectorAll('.img-bar-thumb').forEach(function (thumb) {
+                  if (thumb.getAttribute('data-filename') === filename) {
+                    var timg = thumb.querySelector('img');
+                    if (timg) timg.src = newSrc;
+                  }
+                });
+              }
             } else if (img.src && img.src.indexOf('blob:') !== 0) {
               var base = img.src.split('?')[0];
               img.src = base + '?v=' + ver;
