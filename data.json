@@ -5,7 +5,7 @@
       "name": "test",
       "passkeyHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
       "data": {
-        "savedAt": "2/17/2026, 11:01:07 AM",
+        "savedAt": "2/23/2026, 10:40:12 AM",
         "imageIndex": {
           "task_0_1": "19563a99-29dc-4fb8-b6c7-4364b1cd4352.png",
           "task_1_1": "08f7495e-5d1f-457a-96a0-1a554601c866.jpg"
@@ -34,6 +34,14 @@
               {
                 "comment": "3",
                 "datetime": "2/17/2026, 12:07:36 AM"
+              },
+              {
+                "comment": "```bash\n✅ 3) เปิดใช้งาน timer\nsudo systemctl daemon-reload\nsudo systemctl enable --now logcleaner.timer\nตรวจสอบสถานะ:\nsudo systemctl status logcleaner.timer\nดู history ของงาน:\njournalctl -u logcleaner.service\n\n⭐ ผลลัพธ์\nระบบจะตรวจขนาด /var/log ทุก 1 ชั่วโมง\nถ้า > 1GB:\nลดขนาด systemd-journal → เหลือ 100MB\nลบ log.gz ที่เก่า\nclear ไฟล์ .log\nมี log บันทึกที่ /var/log/log_cleaner.log\n\n```",
+                "datetime": "2/23/2026, 10:24:09 AM"
+              },
+              {
+                "comment": "```js\nconst express = require('express');\nconst multer = require('multer');\nconst path = require('path');\nconst fs = require('fs');\n```\nasdasdasdasd",
+                "datetime": "2/23/2026, 10:26:02 AM"
               }
             ],
             "resultComments": []

@@ -5,7 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Image Task & Result</title>
   <style>
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; scrollbar-width: thin; scrollbar-color: #3f3f46 #18181b; }
+    /* Scrollbar ให้เข้ากับ theme มืด (Webkit) */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #18181b; border-radius: 5px; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 5px; border: 2px solid #18181b; }
+    ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+    ::-webkit-scrollbar-thumb:active { background: #71717a; }
+    ::-webkit-scrollbar-corner { background: #18181b; }
     body {
       font-family: 'Segoe UI', system-ui, sans-serif;
       margin: 0;
@@ -198,7 +205,7 @@
       background: #18181b;
       border: 1px dashed #3f3f46;
       border-radius: 8px;
-      margin-top: 8px;
+      margin-top: 0;
       padding: 10px;
       display: flex;
       align-items: center;
@@ -225,9 +232,9 @@
     .img-bar .img-bar-thumbs:active { cursor: grabbing; }
     .img-bar.img-bar-drag-scroll .img-bar-thumbs { cursor: grabbing; }
     .img-bar .img-bar-thumbs::-webkit-scrollbar { height: 8px; }
-    .img-bar .img-bar-thumbs::-webkit-scrollbar-track { background: #27272a; border-radius: 4px; }
-    .img-bar .img-bar-thumbs::-webkit-scrollbar-thumb { background: #52525b; border-radius: 4px; }
-    .img-bar .img-bar-thumbs::-webkit-scrollbar-thumb:hover { background: #71717a; }
+    .img-bar .img-bar-thumbs::-webkit-scrollbar-track { background: #18181b; border-radius: 4px; }
+    .img-bar .img-bar-thumbs::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+    .img-bar .img-bar-thumbs::-webkit-scrollbar-thumb:hover { background: #52525b; }
     .img-bar .img-bar-thumb {
       width: 100px;
       height: 100px;
@@ -266,24 +273,29 @@
     }
     .img-bar .img-bar-thumb:hover .btn-bar-thumb-delete { opacity: 1; }
     .img-bar .img-bar-thumb .btn-bar-thumb-delete:hover { background: #dc2626; color: #fff; }
-    .img-bar .btn-bar-upload {
-      width: 100px;
-      height: 100px;
-      flex-shrink: 0;
-      border: 2px dashed #52525b;
-      border-radius: 8px;
-      background: #252529;
-      color: #71717a;
-      font-size: 0.75rem;
-      cursor: pointer;
+    .img-bar-wrap { margin-top: 8px; }
+    .img-bar-wrap .img-bar-tool-row {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 4px;
+      gap: 6px;
+      margin-bottom: 6px;
     }
-    .img-bar .btn-bar-upload:hover { border-color: #71717a; color: #a1a1aa; background: #2a2a2e; }
-    .img-bar .btn-bar-upload span:first-child { font-size: 1.5rem; }
+    .img-bar-wrap .img-bar-tool-row .btn-bar-upload {
+      height: 24px;
+      min-width: 52px;
+      padding: 0 8px;
+      font-size: 0.7rem;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      border-radius: 6px;
+      color: #a1a1aa;
+      cursor: pointer;
+    }
+    .img-bar-wrap .img-bar-tool-row .btn-bar-upload:hover {
+      background: #3f3f46;
+      color: #e4e4e7;
+      border-color: #52525b;
+    }
     .img-bar input[type="file"] { display: none; }
     /* Edit image dialog */
     #edit-image-dialog {
@@ -440,7 +452,7 @@
       gap: 10px;
     }
     .comment-feed {
-      max-height: 180px;
+      max-height: 450px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
@@ -461,6 +473,50 @@
       word-break: break-word;
       white-space: pre-wrap;
     }
+    .comment-item .comment-text pre.code-block {
+      margin: 8px 0;
+      padding: 10px 12px;
+      background: #1e2128 !important;
+      border: 1px solid #3f3f46;
+      border-left: 3px solid #3b82f6;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      white-space: pre;
+      color: #9cdcfe;
+    }
+    .comment-item .comment-text pre.code-block code {
+      background: none;
+      padding: 0;
+      color: #d4d4d4;
+      font-family: inherit;
+    }
+    .comment-item .comment-text .code-block-lang {
+      color: #858585;
+      font-size: 0.75rem;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    /* VS Code Dark+ token colors สำหรับ Prism highlight */
+    .comment-item .comment-text pre.code-block .token.comment,
+    .comment-item .comment-text pre.code-block .token.prolog { color: #6a9955; }
+    .comment-item .comment-text pre.code-block .token.keyword { color: #569cd6; }
+    .comment-item .comment-text pre.code-block .token.string { color: #ce9178; }
+    .comment-item .comment-text pre.code-block .token.number { color: #b5cea8; }
+    .comment-item .comment-text pre.code-block .token.function { color: #dcdcaa; }
+    .comment-item .comment-text pre.code-block .token.operator,
+    .comment-item .comment-text pre.code-block .token.punctuation { color: #d4d4d4; }
+    .comment-item .comment-text pre.code-block .token.property,
+    .comment-item .comment-text pre.code-block .token.attr-name { color: #9cdcfe; }
+    .comment-item .comment-text pre.code-block .token.tag { color: #569cd6; }
+    .comment-item .comment-text pre.code-block .token.attr-value { color: #ce9178; }
+    .comment-item .comment-text pre.code-block .token.boolean { color: #569cd6; }
+    .comment-item .comment-text pre.code-block .token.regex { color: #d16969; }
+    .comment-item .comment-text pre.code-block .token.variable { color: #9cdcfe; }
+    .comment-item .comment-text pre.code-block .token.class-name { color: #4ec9b0; }
+    .comment-item .comment-text pre.code-block .token.selector { color: #d7ba7d; }
     .comment-item .comment-time {
       color: #71717a;
       font-size: 0.7rem;
@@ -508,6 +564,11 @@
       font-size: 0.875rem;
       margin-bottom: 4px;
       box-sizing: border-box;
+      font-family: inherit;
+    }
+    .comment-item textarea.comment-edit-input {
+      min-height: 80px;
+      resize: vertical;
     }
     .comment-item .comment-edit-input:focus { outline: none; }
     .comment-form {
@@ -515,17 +576,24 @@
       gap: 8px;
       align-items: center;
     }
-    .comment-form input {
+    .comment-form input,
+    .comment-form textarea {
       flex: 1;
       background: #18181b;
       border: 1px solid #3f3f46;
-      border-radius: 20px;
+      border-radius: 12px;
       color: #e4e4e7;
       padding: 10px 14px;
       font-size: 0.875rem;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 40px;
     }
-    .comment-form input::placeholder { color: #71717a; }
-    .comment-form input:focus {
+    .comment-form textarea { min-height: 56px; line-height: 1.4; }
+    .comment-form input::placeholder,
+    .comment-form textarea::placeholder { color: #71717a; }
+    .comment-form input:focus,
+    .comment-form textarea:focus {
       outline: none;
       border-color: #3b82f6;
     }
@@ -541,6 +609,65 @@
       flex-shrink: 0;
     }
     .comment-form .btn-post:hover { background: #2563eb; }
+    .comment-form .comment-form-code-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      position: relative;
+    }
+    .comment-form .btn-code-mini {
+      height: 24px;
+      min-width: 44px;
+      padding: 0 8px;
+      font-size: 0.7rem;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      border-radius: 6px;
+      color: #a1a1aa;
+      cursor: pointer;
+    }
+    .comment-form .btn-code-mini:hover {
+      background: #3f3f46;
+      color: #e4e4e7;
+      border-color: #52525b;
+    }
+    .comment-form .comment-form-code-dropdown {
+      display: none;
+      position: absolute;
+      left: 0;
+      top: 100%;
+      margin-top: 4px;
+      background: #252529;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      z-index: 100;
+      padding: 4px;
+      min-width: 90px;
+    }
+    .comment-form .comment-form-code-dropdown.visible { display: block; }
+    .comment-form .comment-form-code-option {
+      display: block;
+      width: 100%;
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      color: #e4e4e7;
+      background: none;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .comment-form .comment-form-code-option:hover {
+      background: #3f3f46;
+    }
+    .comment-form .comment-form-input-wrap {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+    }
     .new-task-row {
       margin-top: 24px;
       display: flex;
@@ -868,9 +995,38 @@
       background: #1a1a1e;
       border-left: 1px solid #3f3f46;
       overflow-y: auto;
+      overflow-x: hidden;
       z-index: 100;
       padding: 16px 0;
+      transition: width 0.2s ease, padding 0.2s ease;
     }
+    .task-description-nav.nav-mode-mini {
+      width: 50px;
+      padding: 16px 0 16px 4px;
+    }
+    .task-description-nav.nav-mode-mini .task-description-nav-title {
+      padding: 0 4px 8px;
+      font-size: 0.65rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .task-description-nav.nav-mode-mini .task-description-nav-item {
+      padding: 6px 4px;
+      font-size: 0.7rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .task-description-nav.nav-mode-hide {
+      width: 0;
+      min-width: 0;
+      padding: 0;
+      overflow: hidden;
+      border-left-width: 0;
+    }
+    .task-description-nav.nav-mode-hide .task-description-nav-title,
+    .task-description-nav.nav-mode-hide .task-description-nav-list { opacity: 0; pointer-events: none; }
     .task-description-nav-title {
       font-size: 0.75rem;
       font-weight: 600;
@@ -907,7 +1063,17 @@
       background: #2a2a2e;
     }
     .task-description-nav:focus { outline: none; }
+    @media (max-width: 639px) {
+      .main-content { margin-right: 0; }
+    }
+    @media (min-width: 640px) and (max-width: 1023px) {
+      .main-content { margin-right: 50px; }
+    }
+    @media (min-width: 1024px) {
+      .main-content { margin-right: 200px; }
+    }
   </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
 </head>
 <body>
   <div id="project-gate">
@@ -1009,15 +1175,33 @@
           <span class="placeholder-text">imagetask</span>
           <input type="text" class="img-box-caption" placeholder="index #1" maxlength="500" data-role="task-caption">
         </div>
-        <div class="img-bar" data-role="task-img-bar" data-side="task">
-          <div class="img-bar-thumbs"></div>
-          <button type="button" class="btn-bar-upload"><span>📤</span><span>Upload</span></button>
-          <input type="file" accept="image/*" multiple>
+        <div class="img-bar-wrap">
+          <div class="img-bar-tool-row">
+            <button type="button" class="btn-bar-upload" title="Upload images">[upload]</button>
+          </div>
+          <div class="img-bar" data-role="task-img-bar" data-side="task">
+            <div class="img-bar-thumbs"></div>
+            <input type="file" accept="image/*" multiple>
+          </div>
         </div>
         <div class="comments" data-role="task-comments">
           <div class="comment-feed"></div>
           <div class="comment-form">
-            <input type="text" placeholder="Write a comment..." maxlength="500" autocomplete="off">
+            <div class="comment-form-input-wrap">
+              <div class="comment-form-code-row">
+                <button type="button" class="btn-code-mini" title="Insert code block">[code]</button>
+                <div class="comment-form-code-dropdown">
+                  <button type="button" class="comment-form-code-option" data-lang="bash">bash</button>
+                  <button type="button" class="comment-form-code-option" data-lang="json">json</button>
+                  <button type="button" class="comment-form-code-option" data-lang="js">js</button>
+                  <button type="button" class="comment-form-code-option" data-lang="html">html</button>
+                  <button type="button" class="comment-form-code-option" data-lang="pine">pine</button>
+                  <button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button>
+                  <button type="button" class="comment-form-code-option" data-lang="python">python</button>
+                </div>
+              </div>
+              <textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea>
+            </div>
             <button type="button" class="btn-post">Post</button>
           </div>
         </div>
@@ -1028,15 +1212,33 @@
           <span class="placeholder-text">image result</span>
           <input type="text" class="img-box-caption" placeholder="index #2" maxlength="500" data-role="result-caption">
         </div>
-        <div class="img-bar" data-role="result-img-bar" data-side="result">
-          <div class="img-bar-thumbs"></div>
-          <button type="button" class="btn-bar-upload"><span>📤</span><span>Upload</span></button>
-          <input type="file" accept="image/*" multiple>
+        <div class="img-bar-wrap">
+          <div class="img-bar-tool-row">
+            <button type="button" class="btn-bar-upload" title="Upload images">[upload]</button>
+          </div>
+          <div class="img-bar" data-role="result-img-bar" data-side="result">
+            <div class="img-bar-thumbs"></div>
+            <input type="file" accept="image/*" multiple>
+          </div>
         </div>
         <div class="comments" data-role="result-comments">
           <div class="comment-feed"></div>
           <div class="comment-form">
-            <input type="text" placeholder="Write a comment..." maxlength="500" autocomplete="off">
+            <div class="comment-form-input-wrap">
+              <div class="comment-form-code-row">
+                <button type="button" class="btn-code-mini" title="Insert code block">[code]</button>
+                <div class="comment-form-code-dropdown">
+                  <button type="button" class="comment-form-code-option" data-lang="bash">bash</button>
+                  <button type="button" class="comment-form-code-option" data-lang="json">json</button>
+                  <button type="button" class="comment-form-code-option" data-lang="js">js</button>
+                  <button type="button" class="comment-form-code-option" data-lang="html">html</button>
+                  <button type="button" class="comment-form-code-option" data-lang="pine">pine</button>
+                  <button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button>
+                  <button type="button" class="comment-form-code-option" data-lang="python">python</button>
+                </div>
+              </div>
+              <textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea>
+            </div>
             <button type="button" class="btn-post">Post</button>
           </div>
         </div>
@@ -1054,15 +1256,33 @@
           <span class="placeholder-text">imagetask</span>
           <input type="text" class="img-box-caption" placeholder="index #3" maxlength="500" data-role="task-caption">
         </div>
-        <div class="img-bar" data-role="task-img-bar" data-side="task">
-          <div class="img-bar-thumbs"></div>
-          <button type="button" class="btn-bar-upload"><span>📤</span><span>Upload</span></button>
-          <input type="file" accept="image/*" multiple>
+        <div class="img-bar-wrap">
+          <div class="img-bar-tool-row">
+            <button type="button" class="btn-bar-upload" title="Upload images">[upload]</button>
+          </div>
+          <div class="img-bar" data-role="task-img-bar" data-side="task">
+            <div class="img-bar-thumbs"></div>
+            <input type="file" accept="image/*" multiple>
+          </div>
         </div>
         <div class="comments" data-role="task-comments">
           <div class="comment-feed"></div>
           <div class="comment-form">
-            <input type="text" placeholder="Write a comment..." maxlength="500" autocomplete="off">
+            <div class="comment-form-input-wrap">
+              <div class="comment-form-code-row">
+                <button type="button" class="btn-code-mini" title="Insert code block">[code]</button>
+                <div class="comment-form-code-dropdown">
+                  <button type="button" class="comment-form-code-option" data-lang="bash">bash</button>
+                  <button type="button" class="comment-form-code-option" data-lang="json">json</button>
+                  <button type="button" class="comment-form-code-option" data-lang="js">js</button>
+                  <button type="button" class="comment-form-code-option" data-lang="html">html</button>
+                  <button type="button" class="comment-form-code-option" data-lang="pine">pine</button>
+                  <button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button>
+                  <button type="button" class="comment-form-code-option" data-lang="python">python</button>
+                </div>
+              </div>
+              <textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea>
+            </div>
             <button type="button" class="btn-post">Post</button>
           </div>
         </div>
@@ -1073,15 +1293,33 @@
           <span class="placeholder-text">image result</span>
           <input type="text" class="img-box-caption" placeholder="index #4" maxlength="500" data-role="result-caption">
         </div>
-        <div class="img-bar" data-role="result-img-bar" data-side="result">
-          <div class="img-bar-thumbs"></div>
-          <button type="button" class="btn-bar-upload"><span>📤</span><span>Upload</span></button>
-          <input type="file" accept="image/*" multiple>
+        <div class="img-bar-wrap">
+          <div class="img-bar-tool-row">
+            <button type="button" class="btn-bar-upload" title="Upload images">[upload]</button>
+          </div>
+          <div class="img-bar" data-role="result-img-bar" data-side="result">
+            <div class="img-bar-thumbs"></div>
+            <input type="file" accept="image/*" multiple>
+          </div>
         </div>
         <div class="comments" data-role="result-comments">
           <div class="comment-feed"></div>
           <div class="comment-form">
-            <input type="text" placeholder="Write a comment..." maxlength="500" autocomplete="off">
+            <div class="comment-form-input-wrap">
+              <div class="comment-form-code-row">
+                <button type="button" class="btn-code-mini" title="Insert code block">[code]</button>
+                <div class="comment-form-code-dropdown">
+                  <button type="button" class="comment-form-code-option" data-lang="bash">bash</button>
+                  <button type="button" class="comment-form-code-option" data-lang="json">json</button>
+                  <button type="button" class="comment-form-code-option" data-lang="js">js</button>
+                  <button type="button" class="comment-form-code-option" data-lang="html">html</button>
+                  <button type="button" class="comment-form-code-option" data-lang="pine">pine</button>
+                  <button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button>
+                  <button type="button" class="comment-form-code-option" data-lang="python">python</button>
+                </div>
+              </div>
+              <textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea>
+            </div>
             <button type="button" class="btn-post">Post</button>
           </div>
         </div>
@@ -1102,9 +1340,50 @@
     <nav class="task-description-nav-list" id="task-description-nav-list"></nav>
   </aside>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
   <script>
     function nowStr() {
       return new Date().toLocaleString();
+    }
+
+    function escapeHtml(s) {
+      var div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function renderCommentText(text) {
+      if (!text) return '';
+      var re = /```(\w*)\n?([\s\S]*?)```/g;
+      var parts = [];
+      var lastIdx = 0;
+      var m;
+      var langMap = { js: 'javascript', html: 'markup', pine: 'javascript' };
+      while ((m = re.exec(text)) !== null) {
+        if (m.index > lastIdx) parts.push(escapeHtml(text.slice(lastIdx, m.index)));
+        var lang = (m[1] || '').trim().toLowerCase();
+        var code = m[2].replace(/^\n|\n$/g, '');
+        lang = langMap[lang] || lang;
+        var langSpan = (m[1] || '').trim() ? '<span class="code-block-lang">' + escapeHtml((m[1] || '').trim()) + '</span>' : '';
+        var codeHtml;
+        if (typeof window.Prism !== 'undefined' && window.Prism.highlight && lang && window.Prism.languages[lang]) {
+          try {
+            codeHtml = window.Prism.highlight(code, window.Prism.languages[lang], lang);
+          } catch (e) { codeHtml = escapeHtml(code); }
+        } else {
+          codeHtml = escapeHtml(code);
+        }
+        parts.push(langSpan + '<pre class="code-block"><code class="language-' + escapeHtml(lang) + '">' + codeHtml + '</code></pre>');
+        lastIdx = re.lastIndex;
+      }
+      if (lastIdx < text.length) parts.push(escapeHtml(text.slice(lastIdx)));
+      return parts.join('').replace(/\n/g, '<br>');
     }
 
     function postComment(commentsEl, text) {
@@ -1118,6 +1397,7 @@
       if (!feed) return;
       var item = document.createElement('div');
       item.className = 'comment-item';
+      item.dataset.rawText = text;
       item.innerHTML =
         '<div class="comment-text"></div>' +
         '<div class="comment-time">' + (datetime || nowStr()) + '</div>' +
@@ -1125,7 +1405,7 @@
           '<button type="button" class="btn-edit" title="Edit">✎</button>' +
           '<button type="button" class="btn-delete" title="Delete">✕</button>' +
         '</div>';
-      item.querySelector('.comment-text').textContent = text;
+      item.querySelector('.comment-text').innerHTML = renderCommentText(text);
       feed.appendChild(item);
       feed.scrollTop = feed.scrollHeight;
     }
@@ -1133,19 +1413,22 @@
     function editComment(item) {
       var textEl = item.querySelector('.comment-text');
       if (!textEl) return;
-      var current = textEl.textContent.trim();
-      var input = document.createElement('input');
-      input.type = 'text';
+      var current = (item.dataset.rawText || textEl.textContent || '').trim();
+      var input = document.createElement('textarea');
       input.className = 'comment-edit-input';
       input.value = current;
-      input.maxLength = 500;
+      input.rows = 4;
+      input.style.resize = 'vertical';
       item.classList.add('editing');
       textEl.style.display = 'none';
       textEl.parentNode.insertBefore(input, textEl);
       input.focus();
       function save() {
         var val = input.value.trim();
-        if (val) textEl.textContent = val;
+        if (val) {
+          item.dataset.rawText = val;
+          textEl.innerHTML = renderCommentText(val);
+        }
         textEl.style.display = '';
         input.remove();
         item.classList.remove('editing');
@@ -1153,7 +1436,7 @@
       }
       input.addEventListener('blur', save);
       input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); save(); }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); }
         if (e.key === 'Escape') { textEl.style.display = ''; input.remove(); item.classList.remove('editing'); }
       });
     }
@@ -1288,10 +1571,15 @@
 
     function getBarForBox(imgBox) {
       var next = imgBox && imgBox.nextElementSibling;
-      return (next && next.classList && next.classList.contains('img-bar')) ? next : null;
+      if (!next) return null;
+      if (next.classList && next.classList.contains('img-bar')) return next;
+      if (next.classList && next.classList.contains('img-bar-wrap')) return next.querySelector('.img-bar') || null;
+      return null;
     }
     function getBoxForBar(bar) {
-      var prev = bar && bar.previousElementSibling;
+      var wrap = bar && bar.closest('.img-bar-wrap');
+      var el = wrap || bar;
+      var prev = el.previousElementSibling;
       return (prev && prev.classList && prev.classList.contains('img-box')) ? prev : null;
     }
 
@@ -1451,11 +1739,13 @@
       if (!list) return;
       list.innerHTML = '';
       var blocks = document.querySelectorAll('#blocks .block');
+      var listIndex = 0;
       blocks.forEach(function (block) {
         var blockIndex = block.getAttribute('data-block');
         var taskBox = block.querySelector('[data-role="task-img"]');
         var resultBox = block.querySelector('[data-role="result-img"]');
         if (taskBox) {
+          listIndex += 1;
           var taskCaption = taskBox.querySelector('.img-box-caption');
           var taskText = (taskCaption && taskCaption.value.trim()) || (taskCaption && taskCaption.getAttribute('placeholder')) || 'index #' + (parseInt(blockIndex, 10) * 2 + 1);
           var taskId = 'img-box-' + blockIndex + '-task';
@@ -1463,7 +1753,9 @@
           btn.type = 'button';
           btn.className = 'task-description-nav-item';
           btn.setAttribute('data-target-id', taskId);
-          btn.textContent = taskText;
+          btn.setAttribute('data-full-text', taskText);
+          btn.setAttribute('data-index', String(listIndex));
+          btn.textContent = listIndex + '. ' + taskText;
           btn.addEventListener('click', function () {
             var el = document.getElementById(taskId);
             if (el) {
@@ -1474,6 +1766,7 @@
           list.appendChild(btn);
         }
         if (resultBox) {
+          listIndex += 1;
           var resultCaption = resultBox.querySelector('.img-box-caption');
           var resultText = (resultCaption && resultCaption.value.trim()) || (resultCaption && resultCaption.getAttribute('placeholder')) || 'index #' + (parseInt(blockIndex, 10) * 2 + 2);
           var resultId = 'img-box-' + blockIndex + '-result';
@@ -1481,7 +1774,9 @@
           btn2.type = 'button';
           btn2.className = 'task-description-nav-item';
           btn2.setAttribute('data-target-id', resultId);
-          btn2.textContent = resultText;
+          btn2.setAttribute('data-full-text', resultText);
+          btn2.setAttribute('data-index', String(listIndex));
+          btn2.textContent = listIndex + '. ' + resultText;
           btn2.addEventListener('click', function () {
             var el = document.getElementById(resultId);
             if (el) {
@@ -1493,6 +1788,7 @@
         }
       });
       updateTaskDescriptionNavHighlight();
+      updateTaskDescriptionNavViewport();
       if (window.location.hash) {
         var id = window.location.hash.replace(/^#/, '');
         var el = document.getElementById(id);
@@ -1502,6 +1798,35 @@
           requestAnimationFrame(updateTaskDescriptionNavHighlight);
           setTimeout(function () { allowUrlHashUpdateFromScroll = true; }, 600);
         }
+      }
+    }
+
+    function updateTaskDescriptionNavViewport() {
+      var nav = document.getElementById('task-description-nav');
+      var list = document.getElementById('task-description-nav-list');
+      var titleEl = nav && nav.querySelector('.task-description-nav-title');
+      if (!nav || !list) return;
+      var w = window.innerWidth;
+      var items = list.querySelectorAll('.task-description-nav-item');
+      nav.classList.remove('nav-mode-hide', 'nav-mode-mini');
+      if (w < 640) {
+        nav.classList.add('nav-mode-hide');
+      } else if (w < 1024) {
+        nav.classList.add('nav-mode-mini');
+        items.forEach(function (item) {
+          var idx = item.getAttribute('data-index') || '';
+          var full = item.getAttribute('data-full-text') || '';
+          var short = full.length <= 3 ? full : full.slice(0, 3) + '...';
+          item.textContent = idx ? idx + '. ' + short : short;
+        });
+        if (titleEl) titleEl.textContent = 'Con...';
+      } else {
+        items.forEach(function (item) {
+          var idx = item.getAttribute('data-index') || '';
+          var full = item.getAttribute('data-full-text') || '';
+          item.textContent = idx ? idx + '. ' + full : full;
+        });
+        if (titleEl) titleEl.textContent = 'Contents';
       }
     }
 
@@ -1575,10 +1900,11 @@
     function getCommentsData(commentsEl) {
       var items = commentsEl.querySelectorAll('.comment-item');
       return Array.from(items).map(function (item) {
+        var raw = item.dataset.rawText;
         var text = item.querySelector('.comment-text');
         var time = item.querySelector('.comment-time');
         return {
-          comment: text ? text.textContent.trim() : '',
+          comment: (raw !== undefined && raw !== '') ? raw : (text ? text.textContent.trim() : ''),
           datetime: time ? time.textContent.trim() : ''
         };
       });
@@ -1598,14 +1924,15 @@
             '<span class="placeholder-text">imagetask</span>' +
             '<input type="text" class="img-box-caption" placeholder="index #' + (index * 2 + 1) + '" maxlength="500" data-role="task-caption">' +
           '</div>' +
-          '<div class="img-bar" data-role="task-img-bar" data-side="task">' +
+          '<div class="img-bar-wrap">' +
+            '<div class="img-bar-tool-row"><button type="button" class="btn-bar-upload" title="Upload images">[upload]</button></div>' +
+            '<div class="img-bar" data-role="task-img-bar" data-side="task">' +
             '<div class="img-bar-thumbs"></div>' +
-            '<button type="button" class="btn-bar-upload"><span>📤</span><span>Upload</span></button>' +
             '<input type="file" accept="image/*" multiple>' +
-          '</div>' +
+            '</div></div>' +
           '<div class="comments" data-role="task-comments">' +
             '<div class="comment-feed"></div>' +
-            '<div class="comment-form"><input type="text" placeholder="Write a comment..." maxlength="500" autocomplete="off"><button type="button" class="btn-post">Post</button></div>' +
+            '<div class="comment-form"><div class="comment-form-input-wrap"><div class="comment-form-code-row"><button type="button" class="btn-code-mini" title="Insert code block">[code]</button><div class="comment-form-code-dropdown"><button type="button" class="comment-form-code-option" data-lang="bash">bash</button><button type="button" class="comment-form-code-option" data-lang="json">json</button><button type="button" class="comment-form-code-option" data-lang="js">js</button><button type="button" class="comment-form-code-option" data-lang="html">html</button><button type="button" class="comment-form-code-option" data-lang="pine">pine</button><button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button><button type="button" class="comment-form-code-option" data-lang="python">python</button></div></div><textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea></div><button type="button" class="btn-post">Post</button></div>' +
           '</div>' +
         '</div>' +
         '<div class="col">' +
@@ -1614,14 +1941,15 @@
             '<span class="placeholder-text">image result</span>' +
             '<input type="text" class="img-box-caption" placeholder="index #' + (index * 2 + 2) + '" maxlength="500" data-role="result-caption">' +
           '</div>' +
-          '<div class="img-bar" data-role="result-img-bar" data-side="result">' +
+          '<div class="img-bar-wrap">' +
+            '<div class="img-bar-tool-row"><button type="button" class="btn-bar-upload" title="Upload images">[upload]</button></div>' +
+            '<div class="img-bar" data-role="result-img-bar" data-side="result">' +
             '<div class="img-bar-thumbs"></div>' +
-            '<button type="button" class="btn-bar-upload"><span>📤</span><span>Upload</span></button>' +
             '<input type="file" accept="image/*" multiple>' +
-          '</div>' +
+            '</div></div>' +
           '<div class="comments" data-role="result-comments">' +
             '<div class="comment-feed"></div>' +
-            '<div class="comment-form"><input type="text" placeholder="Write a comment..." maxlength="500" autocomplete="off"><button type="button" class="btn-post">Post</button></div>' +
+            '<div class="comment-form"><div class="comment-form-input-wrap"><div class="comment-form-code-row"><button type="button" class="btn-code-mini" title="Insert code block">[code]</button><div class="comment-form-code-dropdown"><button type="button" class="comment-form-code-option" data-lang="bash">bash</button><button type="button" class="comment-form-code-option" data-lang="json">json</button><button type="button" class="comment-form-code-option" data-lang="js">js</button><button type="button" class="comment-form-code-option" data-lang="html">html</button><button type="button" class="comment-form-code-option" data-lang="pine">pine</button><button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button><button type="button" class="comment-form-code-option" data-lang="python">python</button></div></div><textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea></div><button type="button" class="btn-post">Post</button></div>' +
           '</div>' +
         '</div>';
       if (!skipBind) bindBlockEvents(block);
@@ -2046,17 +2374,52 @@
 
     function bindCommentForm(form) {
       var commentsEl = form.closest('.comments');
-      var input = form.querySelector('input');
+      var input = form.querySelector('textarea') || form.querySelector('input');
       if (!commentsEl || !input) return;
       function submit() {
-        postComment(commentsEl, input.value);
+        var val = input.value.trim();
+        if (!val) return;
+        postComment(commentsEl, val);
         input.value = '';
         updateDataJsonOnServer();
       }
       form.querySelector('.btn-post').addEventListener('click', submit);
       input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); submit(); }
+        if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); submit(); }
       });
+      var codeRow = form.querySelector('.comment-form-code-row');
+      var codeDropdown = form.querySelector('.comment-form-code-dropdown');
+      var btnCode = form.querySelector('.btn-code-mini');
+      if (btnCode && codeDropdown) {
+        btnCode.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var wasVisible = codeDropdown.classList.contains('visible');
+          codeDropdown.classList.toggle('visible');
+          if (!wasVisible && codeDropdown.classList.contains('visible')) {
+            var closeOnce = function () {
+              document.removeEventListener('click', closeOnce);
+              codeDropdown.classList.remove('visible');
+            };
+            setTimeout(function () { document.addEventListener('click', closeOnce); }, 0);
+            input.focus();
+          }
+        });
+        form.querySelectorAll('.comment-form-code-option').forEach(function (opt) {
+          opt.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var lang = opt.getAttribute('data-lang') || 'bash';
+            var template = '```' + lang + '\n//Enter code here\n```';
+            var start = input.selectionStart;
+            var end = input.selectionEnd;
+            var before = input.value.slice(0, start);
+            var after = input.value.slice(end);
+            input.value = before + template + after;
+            input.selectionStart = input.selectionEnd = start + template.length;
+            codeDropdown.classList.remove('visible');
+            input.focus();
+          });
+        });
+      }
     }
 
     function bindBlockEvents(block) {
@@ -2139,7 +2502,8 @@
         var box = getBoxForBar(bar);
         var side = bar.getAttribute('data-side') || (bar.getAttribute('data-role') === 'task-img-bar' ? 'task' : 'result');
         var input = bar.querySelector('input[type="file"]');
-        var btn = bar.querySelector('.btn-bar-upload');
+        var wrap = bar.closest('.img-bar-wrap');
+        var btn = (wrap ? wrap.querySelector('.btn-bar-upload') : null) || bar.querySelector('.btn-bar-upload');
         if (btn && input) btn.addEventListener('click', function () { input.click(); });
         if (input) input.addEventListener('change', function () {
           var files = input.files;
@@ -3028,6 +3392,7 @@
         });
       }
       window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', updateTaskDescriptionNavViewport);
       function scrollToHash() {
         var hash = window.location.hash;
         if (!hash) return;
