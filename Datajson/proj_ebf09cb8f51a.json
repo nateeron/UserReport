@@ -1,0 +1,130 @@
+{
+  "savedAt": "2/23/2026, 12:22:03 PM",
+  "imageIndex": {
+    "task_0": "3a9811b8-2c12-463d-8490-202d6aa17c1a.png",
+    "task_0_1": "f2e89b81-1d76-46af-81ab-8576e8f38453.png",
+    "task_0_2": "4bddf17d-2853-4fa8-8173-b1683e533a5b.png",
+    "result_0_1": "ec204fb5-8187-46e5-ac46-7582dfc6fcbe.png",
+    "result_0_2": "a0bef89d-78e1-477e-a3a8-c16a1789ac9e.png",
+    "task_1_1": "779cef50-2115-4873-84df-f6faac5b5eed.png",
+    "task_1_2": "85fca983-a84b-4a38-826c-c360fb584cca.png",
+    "task_1_3": "267804a3-5ff5-40df-9acc-ec725d87f77f.png",
+    "task_1_4": "484799ab-f0fb-4950-b75c-189af6e6586e.png",
+    "result_1_1": "efe2ca40-1381-412a-8f6d-76c538662192.png",
+    "result_1_2": "856c3f90-ff2c-4722-ab83-1583cf7ff00d.png",
+    "result_1_3": "34a10235-10cf-4064-8da2-29375fd50216.png",
+    "result_1_4": "f1685016-8f76-4502-a4b4-b9f3db6ce21a.png",
+    "task_2": "3f7355e6-4e13-4009-a40e-455f1995b1d9.png",
+    "task_2_1": "47cb1402-e02a-44dd-8a7d-268c4c710014.png",
+    "task_3": "8f1254c4-00ed-41da-8ec0-d078c961698c.png",
+    "task_3_1": "39e14f21-1bb3-40cd-b24f-bd5d899ac714.png",
+    "result_3": "c4fd129e-687c-44d4-9367-961f2368d8b8.png",
+    "result_3_1": "0374c5e2-ceaa-4519-b683-bf47ced2008e.png",
+    "result_3_2": "a1452497-1031-4f04-93e5-105f39094f77.png",
+    "result_3_3": "9862b508-d231-4733-b696-e439f729ff09.png",
+    "result_3_4": "b7aeab13-d4a4-4283-8a42-18bd96d1f809.png",
+    "result_3_5": "d9b59352-6271-4b19-9695-0b61f12a24cf.png",
+    "result_3_6": "8aea9632-6eb4-46af-9911-55f0af3ace7b.png"
+  },
+  "tasks": [
+    {
+      "taskImage": "task_0",
+      "resultImage": "result_0_1",
+      "taskImageKeys": [
+        "task_0",
+        "task_0_1",
+        "task_0_2"
+      ],
+      "resultImageKeys": [
+        "result_0_1",
+        "result_0_2"
+      ],
+      "taskDescription": "Calcurate Rate Salary",
+      "resultDescription": "index #2",
+      "taskComments": [
+        {
+          "comment": "ให้ คำนวน ถ้าเป็น % ไปแปลงค่าเงิน แล้วคำนวน %",
+          "datetime": "2/17/2026, 11:29:57 AM"
+        }
+      ],
+      "resultComments": [
+        {
+          "comment": "123",
+          "datetime": "2/23/2026, 12:22:03 PM"
+        }
+      ]
+    },
+    {
+      "taskImage": "task_1_1",
+      "resultImage": "result_1_1",
+      "taskImageKeys": [
+        "task_1_1",
+        "task_1_2",
+        "task_1_3",
+        "task_1_4"
+      ],
+      "resultImageKeys": [
+        "result_1_1",
+        "result_1_2",
+        "result_1_3",
+        "result_1_4"
+      ],
+      "taskDescription": "Botton Save",
+      "resultDescription": "index #4",
+      "taskComments": [
+        {
+          "comment": "เลือก กด Save > แสดง dilog Confirm > ซ่อน ข้อมูลที่เลือก",
+          "datetime": "2/17/2026, 11:25:15 AM"
+        },
+        {
+          "comment": "PROCEDURE sp_Ins_Invoice_Commission \t\t@Company_ID        INT,--= 3357,         @Created_By        INT,--= 1,         @Recruiter_ID      INT,--= 5162,         @Contract_EMP_ID   NVARCHAR(MAX), -- = '1786,1787',         @Amount       Accounting     NVARCHAR(MAX), -- = '8000,300',         @Currency_ID       NVARCHAR(MAX) -- = '150,150'",
+          "datetime": "2/17/2026, 5:18:38 PM"
+        },
+        {
+          "comment": "Save Accounting sp_Ins_Invoice_Commission",
+          "datetime": "2/17/2026, 5:20:06 PM"
+        }
+      ],
+      "resultComments": []
+    },
+    {
+      "taskImage": "task_2",
+      "resultImage": "result_2",
+      "taskImageKeys": [
+        "task_2",
+        "task_2_1"
+      ],
+      "taskDescription": "Recruiter Payment Information Click ที่ชื่อ แสดง  Dilog",
+      "resultDescription": "index #6",
+      "taskComments": [
+        {
+          "comment": "Click ที่ชื่อ แสดง  Dilog",
+          "datetime": "2/17/2026, 11:28:03 AM"
+        }
+      ],
+      "resultComments": []
+    },
+    {
+      "taskImage": "task_3",
+      "resultImage": "result_3",
+      "taskImageKeys": [
+        "task_3",
+        "task_3_1"
+      ],
+      "resultImageKeys": [
+        "result_3",
+        "result_3_1",
+        "result_3_2",
+        "result_3_3",
+        "result_3_4",
+        "result_3_5",
+        "result_3_6"
+      ],
+      "taskDescription": "index #7",
+      "resultDescription": "index #8",
+      "taskComments": [],
+      "resultComments": []
+    }
+  ],
+  "publicGlobal": true
+}

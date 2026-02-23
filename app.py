@@ -25,6 +25,7 @@ else:
 IMAGE_DIR = BASE_DIR / "image"
 REPORTS_DIR = BASE_DIR / "reports"
 DATA_JSON_PATH = BASE_DIR / "data.json"
+DATAJSON_DIR = BASE_DIR / "Datajson"
 PUBLIC_DATA_PATH = BASE_DIR / "public_data.json"
 
 DEFAULT_PROJECT_DATA = {
@@ -40,30 +41,111 @@ def passkey_hash(passkey):
     return hashlib.sha256((passkey or "").encode("utf-8")).hexdigest()
 
 
+def project_json_path(project_id):
+    """Path to Datajson/{project_id}.json"""
+    if not project_id or not isinstance(project_id, str):
+        return None
+    safe_id = re.sub(r"[^\w\-]", "", project_id)
+    if safe_id != project_id:
+        return None
+    return DATAJSON_DIR / (project_id + ".json")
+
+
 def read_data_file():
-    """อ่าน data.json และแปลงรูปแบบเก่า (ไม่มี projects) เป็นรูปแบบใหม่"""
+    """อ่าน data.json (index เท่านั้น: id, name, passkeyHash, public). ถ้าเป็นรูปแบบเก่าที่มี data ในแต่ละ project จะ migrate ไป Datajson/*.json"""
     if not DATA_JSON_PATH.exists():
         return {"projects": []}
     with open(DATA_JSON_PATH, "r", encoding="utf-8") as f:
         raw = json.load(f)
     if not isinstance(raw, dict):
         return {"projects": []}
-    if "projects" in raw and isinstance(raw["projects"], list):
-        return raw
-    data = {
-        "savedAt": raw.get("savedAt", ""),
-        "imageIndex": raw.get("imageIndex") or {},
-        "tasks": raw.get("tasks") if isinstance(raw.get("tasks"), list) else DEFAULT_PROJECT_DATA["tasks"].copy(),
-    }
-    return {
-        "projects": [
-            {"id": "proj_default", "name": "Default", "passkeyHash": passkey_hash(""), "data": data}
-        ],
-    }
+    projects = raw.get("projects")
+    if not isinstance(projects, list):
+        return {"projects": []}
+    for p in projects:
+        if isinstance(p, dict) and "data" in p:
+            _migrate_to_datajson(projects)
+            break
+    out = []
+    for p in projects:
+        if not isinstance(p, dict) or not p.get("id"):
+            continue
+        out.append({
+            "id": p.get("id"),
+            "name": p.get("name", "Unnamed"),
+            "passkeyHash": p.get("passkeyHash", ""),
+            "public": p.get("public", "0"),
+        })
+    return {"projects": out}
+
+
+def _migrate_to_datajson(old_projects_list):
+    """ย้าย data ของแต่ละ project ไปไฟล์ Datajson/{id}.json แล้วเขียน data.json ใหม่เป็น index อย่างเดียว"""
+    DATAJSON_DIR.mkdir(parents=True, exist_ok=True)
+    index = []
+    for p in old_projects_list:
+        if not isinstance(p, dict) or not p.get("id"):
+            continue
+        pid = p.get("id")
+        index.append({
+            "id": pid,
+            "name": p.get("name", "Unnamed"),
+            "passkeyHash": p.get("passkeyHash", ""),
+            "public": p.get("public", "0"),
+        })
+        data = p.get("data")
+        if isinstance(data, dict):
+            path = project_json_path(pid)
+            if path:
+                try:
+                    with open(path, "w", encoding="utf-8") as f:
+                        json.dump(data, f, ensure_ascii=False, indent=2)
+                except Exception as e:
+                    print("[Migrate] failed to write %s: %s" % (path, e))
+    write_data_file({"projects": index})
+    print("[Migrate] data.json -> index only; project data -> Datajson/*.json")
+
+
+def read_project_data(project_id):
+    """อ่านข้อมูล project จาก Datajson/{project_id}.json"""
+    path = project_json_path(project_id)
+    if not path or not path.exists():
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            return data
+    except Exception as e:
+        print("[Read project] %s: %s" % (project_id, e))
+    return None
+
+
+def write_project_data(project_id, data_dict):
+    """เขียนข้อมูล project ลง Datajson/{project_id}.json (atomic)"""
+    path = project_json_path(project_id)
+    if not path:
+        return False
+    DATAJSON_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".json.tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data_dict, f, ensure_ascii=False, indent=2)
+        tmp.replace(path)
+        return True
+    except Exception as e:
+        print("[Write project] %s: %s" % (project_id, e))
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except Exception:
+                pass
+        return False
 
 
 def write_data_file(obj):
-    """เขียนแบบ atomic (เขียนไฟล์ชั่วคราวแล้ว rename) เพื่อกันไฟล์เสียเมื่อมี save พร้อมกัน"""
+    """เขียน data.json (index อย่างเดียว) แบบ atomic"""
+    DATAJSON_DIR.mkdir(parents=True, exist_ok=True)
     tmp = DATA_JSON_PATH.with_suffix(".json.tmp")
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(obj, f, ensure_ascii=False, indent=2)
@@ -77,13 +159,17 @@ def ensure_data_and_image():
         print("Created image/ folder")
     else:
         print("image/ exists, using it")
+    DATAJSON_DIR.mkdir(parents=True, exist_ok=True)
     if not DATA_JSON_PATH.exists():
         write_data_file({
             "projects": [
-                {"id": "proj_default", "name": "Default", "passkeyHash": passkey_hash(""), "data": DEFAULT_PROJECT_DATA.copy()}
+                {"id": "proj_default", "name": "Default", "passkeyHash": passkey_hash(""), "public": "0"}
             ]
         })
-        print("Created data.json (with Default project)")
+        default_path = project_json_path("proj_default")
+        if default_path and not default_path.exists():
+            write_project_data("proj_default", DEFAULT_PROJECT_DATA.copy())
+        print("Created data.json (index) and Datajson/proj_default.json")
     else:
         print("data.json exists, using it")
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -227,9 +313,13 @@ def api_load_project():
         projects = data.get("projects") or []
         for p in projects:
             if p.get("id") == project_id:
-                if p.get("passkeyHash") != passkey_hash(passkey):
+                if p.get("public") != "1" and p.get("passkeyHash") != passkey_hash(passkey):
                     return jsonify({"error": "Invalid passkey"}), 403
-                out_data = dict(p.get("data") or DEFAULT_PROJECT_DATA)
+                out_data = read_project_data(project_id)
+                if out_data is None:
+                    out_data = dict(DEFAULT_PROJECT_DATA)
+                else:
+                    out_data = dict(out_data)
                 out_data["publicGlobal"] = p.get("public") == "1"
                 return jsonify({"ok": True, "data": out_data})
         return jsonify({"error": "Project not found"}), 404
@@ -251,9 +341,10 @@ def api_create_project():
             "id": new_id,
             "name": name,
             "passkeyHash": passkey_hash(passkey),
-            "data": DEFAULT_PROJECT_DATA.copy(),
+            "public": "0",
         })
         write_data_file({"projects": projects})
+        write_project_data(new_id, DEFAULT_PROJECT_DATA.copy())
         return jsonify({"ok": True, "projectId": new_id, "name": name})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -273,6 +364,13 @@ def api_delete_project():
         if len(new_list) == len(projects):
             return jsonify({"error": "Project not found"}), 404
         write_data_file({"projects": new_list})
+        path = project_json_path(project_id)
+        if path and path.exists():
+            try:
+                path.unlink()
+                print("[Delete project] removed %s" % path)
+            except OSError as e:
+                print("[Delete project] could not remove %s: %s" % (path, e))
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -301,15 +399,15 @@ def save_report():
             "imageIndex": data.get("imageIndex") if isinstance(data.get("imageIndex"), dict) else {},
             "tasks": data["tasks"],
         }
-        full = read_data_file()
-        projects = full.get("projects") or []
+        index_data = read_data_file()
+        projects = index_data.get("projects") or []
         found = False
         to_remove = set()
         for p in projects:
             if p.get("id") == project_id:
-                if p.get("passkeyHash") != passkey_hash(passkey):
+                if p.get("public") != "1" and p.get("passkeyHash") != passkey_hash(passkey):
                     return jsonify({"error": "Invalid passkey"}), 403
-                old_data = p.get("data") or {}
+                old_data = read_project_data(project_id) or {}
                 if "publicGlobal" in data:
                     payload["publicGlobal"] = bool(data.get("publicGlobal"))
                 else:
@@ -319,12 +417,12 @@ def save_report():
                 old_filenames = set(old_index.values())
                 new_filenames = set(new_index.values())
                 to_remove = old_filenames - new_filenames
-                p["data"] = payload
+                if not write_project_data(project_id, payload):
+                    return jsonify({"error": "Failed to write project data"}), 500
                 found = True
                 break
         if not found:
             return jsonify({"error": "Project not found"}), 404
-        write_data_file(full)
         for filename in to_remove:
             if not filename or not isinstance(filename, str):
                 continue
@@ -345,8 +443,8 @@ def save_report():
                     print("[Save] deleted unused image: %s" % name)
                 except OSError as e:
                     print("[Save] could not delete image %s: %s" % (name, e))
-        print("[Save] data.json updated, project=%s, tasks=%s" % (project_id, len(payload["tasks"])))
-        return jsonify({"ok": True, "saved": "data.json", "dataJsonUpdated": True})
+        print("[Save] Datajson/%s.json updated, project=%s, tasks=%s" % (project_id, project_id, len(payload["tasks"])))
+        return jsonify({"ok": True, "saved": "Datajson/%s.json" % project_id, "dataJsonUpdated": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -384,12 +482,14 @@ def api_get_data():
         projects = data.get("projects") or []
         for p in projects:
             if p.get("public") == "1":
-                return jsonify(p.get("data") or DEFAULT_PROJECT_DATA)
+                out = read_project_data(p.get("id"))
+                return jsonify(out if isinstance(out, dict) else DEFAULT_PROJECT_DATA)
         public = read_public_data()
         if public is not None:
             return jsonify(public)
         if len(projects) == 1:
-            return jsonify(projects[0].get("data") or DEFAULT_PROJECT_DATA)
+            out = read_project_data(projects[0].get("id"))
+            return jsonify(out if isinstance(out, dict) else DEFAULT_PROJECT_DATA)
         return jsonify(DEFAULT_PROJECT_DATA)
     except Exception as e:
         print("[Load data] Error:", e)

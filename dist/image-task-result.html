@@ -1,0 +1,3676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Task & Result</title>
+  <style>
+    * { box-sizing: border-box; scrollbar-width: thin; scrollbar-color: #3f3f46 #18181b; }
+    /* Scrollbar ให้เข้ากับ theme มืด (Webkit) */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #18181b; border-radius: 5px; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 5px; border: 2px solid #18181b; }
+    ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+    ::-webkit-scrollbar-thumb:active { background: #71717a; }
+    ::-webkit-scrollbar-corner { background: #18181b; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #1a1a1e;
+      color: #e4e4e7;
+      min-height: 100vh;
+    }
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .page-header .switch-public-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      margin-right: 12px;
+      font-size: 0.875rem;
+      color: #a1a1aa;
+    }
+    .page-header .switch-public-label { user-select: none; }
+    .page-header .switch-public { width: 40px; height: 22px; cursor: pointer; accent-color: #3b82f6; }
+    .page-header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 0;
+      color: #fafafa;
+    }
+    .btn-logout {
+      padding: 8px 16px;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      background: #252529;
+      color: #e4e4e7;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .btn-logout:hover {
+      background: #3f3f46;
+      border-color: #52525b;
+    }
+    .block {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 24px;
+      padding: 20px;
+      margin-bottom: 16px;
+      background: #252529;
+      border-radius: 12px;
+      border: 1px solid #3f3f46;
+      position: relative;
+    }
+    .block .btn-delete-task {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 6px 12px;
+      background: #3f3f46;
+      border: none;
+      border-radius: 6px;
+      color: #a1a1aa;
+      font-size: 0.75rem;
+      cursor: pointer;
+      z-index: 2;
+    }
+    .block .btn-delete-task:hover {
+      background: #dc2626;
+      color: #fff;
+    }
+    .block-sep {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #52525b, transparent);
+      margin: 20px 0;
+    }
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+    .col-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #a1a1aa;
+    }
+    .img-box {
+      aspect-ratio: 4/3;
+      background: #18181b;
+      border: 1px dashed #3f3f46;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #71717a;
+      font-size: 0.875rem;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+    }
+    .img-box:hover { border-color: #52525b; }
+    .img-box.uploading { opacity: 0.7; pointer-events: none; }
+    .img-box.uploading::after {
+      content: 'Uploading…';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.5);
+      font-size: 0.875rem;
+    }
+    .img-box input[type="file"] { display: none; }
+    .img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      cursor: zoom-in;
+    }
+    .img-box .upload-hint {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      font-size: 0.7rem;
+      color: #52525b;
+    }
+    .img-box .img-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 6px;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 2;
+    }
+    .img-box.has-image:hover .img-actions { opacity: 1; }
+    .img-box .img-actions button {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .img-box .img-actions button:hover {
+      background: rgba(0,0,0,0.85);
+    }
+    .img-box .img-actions .btn-delete-img:hover { background: #dc2626; }
+    .img-box.drag-over {
+      border-color: #a78bfa;
+      background: #2e2e33;
+    }
+    .img-box.view-only { cursor: default; }
+    .img-box.view-only.has-image { cursor: zoom-in; }
+    .img-box .img-box-caption {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 8px 10px;
+      background: rgba(0,0,0,0.7);
+      color: #cb8334;
+      border: none;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.8125rem;
+      outline: none;
+      z-index: 2;
+    }
+    .img-box .img-box-caption::placeholder { color: #cb8334; opacity: 0.8; }
+    .img-box .img-box-caption:focus { background: rgba(0,0,0,0.85); }
+    /* แถบรูปย่อใต้ img-box (เมื่อมีรูปเยอะแสดง scroll แนวนอน) */
+    .img-bar {
+      height: 120px;
+      min-height: 120px;
+      min-width: 0;
+      background: #18181b;
+      border: 1px dashed #3f3f46;
+      border-radius: 8px;
+      margin-top: 0;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    .img-bar:hover { border-color: #52525b; }
+    .img-bar.drag-over { border-color: #a78bfa; background: #2e2e33; }
+    .img-bar.uploading { opacity: 0.7; pointer-events: none; }
+    .img-bar .img-bar-thumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+      flex: 1 1 0;
+      min-width: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 6px;
+      cursor: grab;
+      user-select: none;
+    }
+    .img-bar .img-bar-thumbs:active { cursor: grabbing; }
+    .img-bar.img-bar-drag-scroll .img-bar-thumbs { cursor: grabbing; }
+    .img-bar .img-bar-thumbs::-webkit-scrollbar { height: 8px; }
+    .img-bar .img-bar-thumbs::-webkit-scrollbar-track { background: #18181b; border-radius: 4px; }
+    .img-bar .img-bar-thumbs::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+    .img-bar .img-bar-thumbs::-webkit-scrollbar-thumb:hover { background: #52525b; }
+    .img-bar .img-bar-thumb {
+      width: 100px;
+      height: 100px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid #3f3f46;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f11;
+      position: relative;
+    }
+    .img-bar .img-bar-thumb:hover { border-color: #71717a; }
+    .img-bar .img-bar-thumb.selected { border-color: #3b82f6; box-shadow: 0 0 0 2px #3b82f6; }
+    .img-bar .img-bar-thumb img { width: 100%; height: 100%; object-fit: contain; }
+    .img-bar .img-bar-thumb .btn-bar-thumb-delete {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.75);
+      color: #f4f4f5;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .img-bar .img-bar-thumb:hover .btn-bar-thumb-delete { opacity: 1; }
+    .img-bar .img-bar-thumb .btn-bar-thumb-delete:hover { background: #dc2626; color: #fff; }
+    .img-bar-wrap { margin-top: 8px; }
+    .img-bar-wrap .img-bar-tool-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .img-bar-wrap .img-bar-tool-row .btn-bar-upload {
+      height: 24px;
+      min-width: 52px;
+      padding: 0 8px;
+      font-size: 0.7rem;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      border-radius: 6px;
+      color: #a1a1aa;
+      cursor: pointer;
+    }
+    .img-bar-wrap .img-bar-tool-row .btn-bar-upload:hover {
+      background: #3f3f46;
+      color: #e4e4e7;
+      border-color: #52525b;
+    }
+    .img-bar input[type="file"] { display: none; }
+    /* Edit image dialog */
+    #edit-image-dialog {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 10002;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #edit-image-dialog.active { display: flex; }
+    #edit-image-dialog .edit-image-dialog-inner {
+      width: 100%;
+      max-width: 98vw;
+      height: 100%;
+      max-height: 98vh;
+      background: #1a1a1e;
+      border-radius: 12px;
+      border: 1px solid #3f3f46;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #edit-image-dialog .edit-image-dialog-bar {
+      flex: 0 0 auto;
+      padding: 10px 12px;
+      border-bottom: 1px solid #3f3f46;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    #edit-image-dialog .edit-image-dialog-bar .btn-close-edit {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #3f3f46;
+      color: #e4e4e7;
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    #edit-image-dialog .edit-image-dialog-bar .btn-close-edit:hover { background: #52525b; }
+    #edit-image-dialog .edit-image-iframe-wrap {
+      flex: 1;
+      min-height: 0;
+    }
+    #edit-image-dialog .edit-image-iframe-wrap iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    /* Image zoom overlay (คลิกรูปใน .img-box.has-image → ซูม Scroll ลากเลื่อน) */
+    .img-zoom-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(62, 62, 63, 0.88);
+      z-index: 9999;
+      cursor: default;
+    }
+    .img-zoom-overlay.active { display: block; }
+    .img-zoom-overlay .img-zoom-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      font-size: 1.25rem;
+      cursor: pointer;
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .img-zoom-overlay .img-zoom-close:hover { background: rgba(255,255,255,0.25); }
+    .img-zoom-overlay .img-zoom-wrap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transform-origin: center center;
+      transition: transform 0.1s ease;
+    }
+    .img-zoom-overlay .img-zoom-wrap .img-zoom-image {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      box-shadow: 5px 3px 50px rgba(0,0,0,0.97);
+      pointer-events: none;
+      user-select: none;
+    }
+    .img-zoom-overlay .img-zoom-percent {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(99, 102, 106, 0.82);
+      font-size: 1rem;
+      color: rgba(240, 248, 255, 0.87);
+      min-width: 75px;
+      text-align: center;
+      border-radius: 8px;
+      padding: 6px 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 10000;
+    }
+    .img-zoom-overlay .img-zoom-percent.show { opacity: 1; }
+    .img-zoom-overlay-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 120px;
+      background: rgba(0,0,0,0.85);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px;
+      overflow-x: auto;
+      z-index: 10001;
+    }
+    .img-zoom-overlay-bar-thumb {
+      width: 100px;
+      height: 100px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+    }
+    .img-zoom-overlay-bar-thumb:hover { border-color: rgba(255,255,255,0.5); }
+    .img-zoom-overlay-bar-thumb.selected { border-color: #cb8334; box-shadow: 0 0 0 2px #cb8334; }
+    .img-zoom-overlay-bar-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .comments {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .comment-feed {
+      max-height: 450px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 8px 0;
+    }
+    .comment-item {
+      background: #18181b;
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid #27272a;
+      position: relative;
+      padding-right: 36px;
+    }
+    .comment-item .comment-text {
+      font-size: 0.875rem;
+      color: #e4e4e7;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .comment-item .comment-text pre.code-block {
+      margin: 8px 0;
+      padding: 10px 12px;
+      background: #1e2128 !important;
+      border: 1px solid #3f3f46;
+      border-left: 3px solid #3b82f6;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      white-space: pre;
+      color: #9cdcfe;
+    }
+    .comment-item .comment-text pre.code-block code {
+      background: none;
+      padding: 0;
+      color: #d4d4d4;
+      font-family: inherit;
+    }
+    .comment-item .comment-text .code-block-lang {
+      color: #858585;
+      font-size: 0.75rem;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    /* VS Code Dark+ token colors สำหรับ Prism highlight */
+    .comment-item .comment-text pre.code-block .token.comment,
+    .comment-item .comment-text pre.code-block .token.prolog { color: #6a9955; }
+    .comment-item .comment-text pre.code-block .token.keyword { color: #569cd6; }
+    .comment-item .comment-text pre.code-block .token.string { color: #ce9178; }
+    .comment-item .comment-text pre.code-block .token.number { color: #b5cea8; }
+    .comment-item .comment-text pre.code-block .token.function { color: #dcdcaa; }
+    .comment-item .comment-text pre.code-block .token.operator,
+    .comment-item .comment-text pre.code-block .token.punctuation { color: #d4d4d4; }
+    .comment-item .comment-text pre.code-block .token.property,
+    .comment-item .comment-text pre.code-block .token.attr-name { color: #9cdcfe; }
+    .comment-item .comment-text pre.code-block .token.tag { color: #569cd6; }
+    .comment-item .comment-text pre.code-block .token.attr-value { color: #ce9178; }
+    .comment-item .comment-text pre.code-block .token.boolean { color: #569cd6; }
+    .comment-item .comment-text pre.code-block .token.regex { color: #d16969; }
+    .comment-item .comment-text pre.code-block .token.variable { color: #9cdcfe; }
+    .comment-item .comment-text pre.code-block .token.class-name { color: #4ec9b0; }
+    .comment-item .comment-text pre.code-block .token.selector { color: #d7ba7d; }
+    .comment-item .comment-time {
+      color: #71717a;
+      font-size: 0.7rem;
+      margin-top: 4px;
+    }
+    .comment-item .comment-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .comment-item:hover .comment-actions,
+    .comment-item.editing .comment-actions {
+      opacity: 1;
+    }
+    .comment-item .comment-actions button {
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: none;
+      border-radius: 6px;
+      background: #3f3f46;
+      color: #a1a1aa;
+      cursor: pointer;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .comment-item .comment-actions button:hover {
+      background: #52525b;
+      color: #fff;
+    }
+    .comment-item .comment-actions .btn-delete:hover { background: #dc2626; color: #fff; }
+    .comment-item .comment-edit-input {
+      width: 100%;
+      background: #27272a;
+      border: 1px solid #3b82f6;
+      border-radius: 6px;
+      color: #e4e4e7;
+      padding: 6px 8px;
+      font-size: 0.875rem;
+      margin-bottom: 4px;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    .comment-item textarea.comment-edit-input {
+      min-height: 80px;
+      resize: vertical;
+    }
+    .comment-item .comment-edit-input:focus { outline: none; }
+    .comment-form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .comment-form input,
+    .comment-form textarea {
+      flex: 1;
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 12px;
+      color: #e4e4e7;
+      padding: 10px 14px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 40px;
+    }
+    .comment-form textarea { min-height: 56px; line-height: 1.4; }
+    .comment-form input::placeholder,
+    .comment-form textarea::placeholder { color: #71717a; }
+    .comment-form input:focus,
+    .comment-form textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+    .comment-form .btn-post {
+      padding: 8px 16px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 20px;
+      color: #fff;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .comment-form .btn-post:hover { background: #2563eb; }
+    .comment-form .comment-form-code-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      position: relative;
+    }
+    .comment-form .btn-code-mini {
+      height: 24px;
+      min-width: 44px;
+      padding: 0 8px;
+      font-size: 0.7rem;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      border-radius: 6px;
+      color: #a1a1aa;
+      cursor: pointer;
+    }
+    .comment-form .btn-code-mini:hover {
+      background: #3f3f46;
+      color: #e4e4e7;
+      border-color: #52525b;
+    }
+    .comment-form .btn-comment-upload {
+      height: 24px;
+      min-width: 44px;
+      padding: 0 8px;
+      font-size: 0.7rem;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      border-radius: 6px;
+      color: #a1a1aa;
+      cursor: pointer;
+    }
+    .comment-form .btn-comment-upload:hover {
+      background: #3f3f46;
+      color: #e4e4e7;
+      border-color: #52525b;
+    }
+    .comment-form .comment-form-code-dropdown {
+      display: none;
+      position: absolute;
+      left: 0;
+      top: 100%;
+      margin-top: 4px;
+      background: #252529;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      z-index: 100;
+      padding: 4px;
+      min-width: 90px;
+    }
+    .comment-form .comment-form-code-dropdown.visible { display: block; }
+    .comment-form .comment-form-code-option {
+      display: block;
+      width: 100%;
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      color: #e4e4e7;
+      background: none;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .comment-form .comment-form-code-option:hover {
+      background: #3f3f46;
+    }
+    .comment-form .comment-form-input-wrap {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+      border-radius: 12px;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+    .comment-form .comment-form-input-wrap.drag-over {
+      background: rgba(167, 139, 250, 0.08);
+      box-shadow: 0 0 0 2px #a78bfa;
+    }
+    .comment-form .comment-form-preview {
+      max-height: 300px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 8px 0;
+      margin-bottom: 4px;
+    }
+    .comment-form .comment-form-preview:empty { display: none; }
+    .comment-form .comment-form-preview-item {
+      position: relative;
+      flex-shrink: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #3f3f46;
+      background: #18181b;
+    }
+    .comment-form .comment-form-preview-item img {
+      max-height: 300px;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      display: block;
+      cursor: zoom-in;
+      vertical-align: top;
+    }
+    .comment-form .comment-form-preview-item .comment-form-preview-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.75);
+      color: #f4f4f5;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .comment-form .comment-form-preview-item:hover .comment-form-preview-remove { opacity: 1; }
+    .comment-form .comment-form-preview-item .comment-form-preview-remove:hover { background: #dc2626; color: #fff; }
+    .comment-item .comment-text .comment-inline-img {
+      max-height: 300px;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      display: block;
+      cursor: zoom-in;
+      border-radius: 8px;
+      margin: 8px 0;
+      border: 1px solid #3f3f46;
+    }
+    .new-task-row {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+    }
+    .btn-new-task {
+      padding: 14px 32px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-new-task:hover { background: #2563eb; }
+    .placeholder-text { color: #71717a; }
+    /* Confirm delete dialog */
+    .confirm-dialog-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+    }
+    .confirm-dialog-overlay.active { display: flex; }
+    .confirm-dialog {
+      background: #252529;
+      border: 1px solid #3f3f46;
+      border-radius: 12px;
+      padding: 24px;
+      min-width: 320px;
+      max-width: 90vw;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    .confirm-dialog h3 {
+      margin: 0 0 12px;
+      font-size: 1.125rem;
+      color: #fafafa;
+    }
+    .confirm-dialog p {
+      margin: 0 0 20px;
+      color: #a1a1aa;
+      font-size: 0.9375rem;
+    }
+    .confirm-dialog-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+    .confirm-dialog-actions button {
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+    }
+    .confirm-dialog-actions .btn-cancel {
+      background: #3f3f46;
+      color: #e4e4e7;
+    }
+    .confirm-dialog-actions .btn-cancel:hover { background: #52525b; }
+    .confirm-dialog-actions .btn-confirm-delete {
+      background: #dc2626;
+      color: #fff;
+    }
+    .confirm-dialog-actions .btn-confirm-delete:hover { background: #b91c1c; }
+    /* Project gate: เลือก Project + Passkey */
+    #project-gate {
+      position: fixed;
+      inset: 0;
+      background: #1a1a1e;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #project-gate.hidden { display: none; }
+    .project-gate-box {
+      background: #252529;
+      border: 1px solid #3f3f46;
+      border-radius: 12px;
+      padding: 28px;
+      min-width: 320px;
+      max-width: 420px;
+      width: 100%;
+    }
+    .project-gate-box h2 {
+      margin: 0 0 20px;
+      font-size: 1.25rem;
+      color: #fafafa;
+    }
+    .project-gate-box label {
+      display: block;
+      font-size: 0.8125rem;
+      color: #a1a1aa;
+      margin-bottom: 6px;
+    }
+    .project-gate-box input, .project-gate-box select {
+      width: 100%;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      color: #e4e4e7;
+      font-size: 0.9375rem;
+      box-sizing: border-box;
+    }
+    .project-gate-box .btn-load, .project-gate-box .btn-create-project {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    .project-gate-box .btn-load { background: #3b82f6; color: #fff; }
+    .project-gate-box .btn-load:hover { background: #2563eb; }
+    .project-gate-box .btn-create-project { background: #3f3f46; color: #e4e4e7; margin-top: 20px; }
+    .project-gate-box .btn-create-project:hover { background: #52525b; }
+    .project-gate-box .gate-error { color: #dc2626; font-size: 0.8125rem; margin-top: 8px; }
+    .project-gate-box hr { border: none; border-top: 1px solid #3f3f46; margin: 24px 0 20px; }
+    .project-gate-box .project-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .project-gate-box .project-card {
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .project-gate-box .project-card:hover {
+      border-color: #3b82f6;
+      background: #27272a;
+    }
+    .project-gate-box .project-card .project-card-name {
+      font-size: 0.9375rem;
+      color: #e4e4e7;
+      word-break: break-word;
+    }
+    .project-gate-box .project-card {
+      position: relative;
+    }
+    .project-gate-box .project-card .btn-delete-project {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: none;
+      border-radius: 6px;
+      background: rgba(0,0,0,0.5);
+      color: #a1a1aa;
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .project-gate-box .project-card .btn-delete-project:hover {
+      background: #dc2626;
+      color: #fff;
+    }
+    /* Dialog ยืนยันลบ Project (ใส่ตัวเลข Random 4 ตัว) */
+    #delete-project-dialog-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 10002;
+      align-items: center;
+      justify-content: center;
+    }
+    #delete-project-dialog-overlay.active { display: flex; }
+    #delete-project-dialog-overlay .delete-project-dialog-box {
+      background: #252529;
+      border: 1px solid #3f3f46;
+      border-radius: 12px;
+      padding: 24px;
+      min-width: 320px;
+    }
+    #delete-project-dialog-overlay .delete-project-dialog-box h3 { margin: 0 0 12px; font-size: 1.125rem; color: #fafafa; }
+    #delete-project-dialog-overlay .delete-project-dialog-box .delete-project-dialog-msg { color: #a1a1aa; font-size: 0.875rem; margin-bottom: 12px; }
+    #delete-project-dialog-overlay .delete-project-dialog-box .delete-project-random-code {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: #fafafa;
+      background: #18181b;
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      text-align: center;
+      border: 1px solid #3f3f46;
+    }
+    #delete-project-dialog-overlay .delete-project-dialog-box input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      color: #e4e4e7;
+      font-size: 1rem;
+      box-sizing: border-box;
+      letter-spacing: 0.15em;
+      text-align: center;
+    }
+    #delete-project-dialog-overlay .delete-project-dialog-box .delete-project-dialog-error {
+      color: #dc2626;
+      font-size: 0.8125rem;
+      margin-top: 8px;
+    }
+    #delete-project-dialog-overlay .delete-project-dialog-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+    #delete-project-dialog-overlay .delete-project-dialog-actions button {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      border: none;
+    }
+    #delete-project-dialog-overlay .delete-project-dialog-cancel { background: #3f3f46; color: #e4e4e7; }
+    #delete-project-dialog-overlay .delete-project-dialog-confirm { background: #dc2626; color: #fff; }
+    #delete-project-dialog-overlay .delete-project-dialog-confirm:hover { background: #b91c1c; }
+    /* Passkey dialog (เปิดหลังเลือกการ์ด) */
+    #passkey-dialog-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 10001;
+      align-items: center;
+      justify-content: center;
+    }
+    #passkey-dialog-overlay.active { display: flex; }
+    #passkey-dialog-overlay .passkey-dialog-box {
+      background: #252529;
+      border: 1px solid #3f3f46;
+      border-radius: 12px;
+      padding: 24px;
+      min-width: 300px;
+    }
+    #passkey-dialog-overlay .passkey-dialog-box h3 { margin: 0 0 16px; font-size: 1.125rem; color: #fafafa; }
+    #passkey-dialog-overlay .passkey-dialog-box input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      color: #e4e4e7;
+      font-size: 0.9375rem;
+      box-sizing: border-box;
+    }
+    #passkey-dialog-overlay .passkey-input-wrap { margin-bottom: 16px; }
+    #passkey-dialog-overlay .passkey-input-wrap input { margin-bottom: 0; }
+    #passkey-dialog-overlay .passkey-dialog-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    #passkey-dialog-overlay .passkey-dialog-actions button {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      border: none;
+    }
+    #passkey-dialog-overlay .passkey-dialog-cancel { background: #3f3f46; color: #e4e4e7; }
+    #passkey-dialog-overlay .passkey-dialog-load { background: #3b82f6; color: #fff; }
+    #passkey-dialog-overlay .passkey-dialog-error { color: #dc2626; font-size: 0.8125rem; margin-top: 8px; }
+    /* Passkey show/hide toggle */
+    .passkey-input-wrap {
+      position: relative;
+      margin-bottom: 16px;
+    }
+    .passkey-input-wrap input {
+      padding-right: 44px;
+      margin-bottom: 0;
+    }
+    .passkey-input-wrap .btn-toggle-passkey {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #a1a1aa;
+      cursor: pointer;
+      padding: 4px;
+      font-size: 1rem;
+      line-height: 1;
+    }
+    .passkey-input-wrap .btn-toggle-passkey:hover { color: #e4e4e7; }
+    .project-gate-box .passkey-input-wrap { margin-bottom: 16px; }
+    .project-gate-box .passkey-input-wrap input { margin-bottom: 0; }
+    .main-content { margin-right: 200px; }
+    .task-description-nav {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 200px;
+      height: 100vh;
+      background: #1a1a1e;
+      border-left: 1px solid #3f3f46;
+      overflow-y: auto;
+      overflow-x: hidden;
+      z-index: 100;
+      padding: 16px 0;
+      transition: width 0.2s ease, padding 0.2s ease;
+    }
+    .task-description-nav.nav-mode-mini {
+      width: 50px;
+      padding: 16px 0 16px 4px;
+    }
+    .task-description-nav.nav-mode-mini .task-description-nav-title {
+      padding: 0 4px 8px;
+      font-size: 0.65rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .task-description-nav.nav-mode-mini .task-description-nav-item {
+      padding: 6px 4px;
+      font-size: 0.7rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .task-description-nav.nav-mode-hide {
+      width: 0;
+      min-width: 0;
+      padding: 0;
+      overflow: hidden;
+      border-left-width: 0;
+    }
+    .task-description-nav.nav-mode-hide .task-description-nav-title,
+    .task-description-nav.nav-mode-hide .task-description-nav-list { opacity: 0; pointer-events: none; }
+    .task-description-nav-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #a1a1aa;
+      padding: 0 12px 10px;
+      border-bottom: 1px solid #3f3f46;
+      margin-bottom: 10px;
+    }
+    .task-description-nav-list { display: flex; flex-direction: column; gap: 2px; }
+    .task-description-nav-item {
+      display: block;
+      padding: 8px 12px;
+      font-size: 0.8125rem;
+      color: #cb8334;
+      text-align: left;
+      background: transparent;
+      border: none;
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .task-description-nav-item:hover { background: #252529; }
+    .task-description-nav-item:focus { outline: none; border-left-color: #cb8334; }
+    .task-description-nav-item.task-description-nav-item-active {
+      border-left-color: #cb8334;
+      background: #252529;
+    }
+    .task-description-nav:focus-within .task-description-nav-item.task-description-nav-item-active {
+      font-weight: bold;
+      border-left-width: 4px;
+      background: #2a2a2e;
+    }
+    .task-description-nav:focus { outline: none; }
+    @media (max-width: 639px) {
+      .main-content { margin-right: 0; }
+    }
+    @media (min-width: 640px) and (max-width: 1023px) {
+      .main-content { margin-right: 50px; }
+    }
+    @media (min-width: 1024px) {
+      .main-content { margin-right: 200px; }
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <div id="project-gate">
+    <div class="project-gate-box">
+      <h2>Load Project</h2>
+      <p style="color:#a1a1aa;font-size:0.875rem;margin:0 0 12px;">เลือก Project ที่ต้องการเปิด</p>
+      <div id="gate-project-cards" class="project-cards-grid"></div>
+      <hr>
+      <h2 style="font-size:1rem;">New Project</h2>
+      <label for="gate-new-name">Project name</label>
+      <input type="text" id="gate-new-name" placeholder="Project name">
+      <label for="gate-new-passkey">Passkey</label>
+      <div class="passkey-input-wrap">
+        <input type="password" id="gate-new-passkey" placeholder="Passkey" autocomplete="off">
+        <button type="button" class="btn-toggle-passkey" id="gate-new-passkey-toggle" title="Show passkey" aria-label="Show passkey">👁</button>
+      </div>
+      <div id="gate-error" class="gate-error" style="display:none;"></div>
+      <button type="button" class="btn-create-project" id="gate-btn-create">Create &amp; Open</button>
+    </div>
+  </div>
+
+  <div id="passkey-dialog-overlay">
+    <div class="passkey-dialog-box">
+      <h3 id="passkey-dialog-title">Enter Passkey</h3>
+      <div class="passkey-input-wrap">
+        <input type="password" id="passkey-dialog-input" placeholder="Passkey" autocomplete="off">
+        <button type="button" class="btn-toggle-passkey" id="passkey-dialog-toggle" title="Show passkey" aria-label="Show passkey">👁</button>
+      </div>
+      <div id="passkey-dialog-error" class="passkey-dialog-error" style="display:none;"></div>
+      <div class="passkey-dialog-actions">
+        <button type="button" class="passkey-dialog-cancel">Cancel</button>
+        <button type="button" class="passkey-dialog-load">Load</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="delete-project-dialog-overlay">
+    <div class="delete-project-dialog-box">
+      <h3 id="delete-project-dialog-title">ยืนยันลบ Project</h3>
+      <p class="delete-project-dialog-msg" id="delete-project-dialog-msg">ลบ Project นี้? พิมพ์ตัวเลขด้านล่างเพื่อยืนยัน</p>
+      <div class="delete-project-random-code" id="delete-project-random-code">0000</div>
+      <input type="text" id="delete-project-confirm-input" placeholder="พิมพ์ตัวเลข 4 หลัก" maxlength="4" inputmode="numeric" autocomplete="off">
+      <div id="delete-project-dialog-error" class="delete-project-dialog-error" style="display:none;"></div>
+      <div class="delete-project-dialog-actions">
+        <button type="button" class="delete-project-dialog-cancel">ยกเลิก</button>
+        <button type="button" class="delete-project-dialog-confirm">ลบ Project</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="edit-image-dialog">
+    <div class="edit-image-dialog-inner">
+      <div class="edit-image-dialog-bar">
+        <button type="button" class="btn-close-edit">ปิด</button>
+      </div>
+      <div class="edit-image-iframe-wrap">
+        <iframe id="edit-image-iframe" src="about:blank" title="Edit image"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+  <div class="page-header">
+    <h1>Image Task & Result</h1>
+    <label class="switch-public-wrap" id="switch-public-wrap" style="display:none;">
+      <span class="switch-public-label">เปิดสาธารณะ</span>
+      <input type="checkbox" id="switch-public" class="switch-public" title="Update global JSON และเปิดหน้าเช็ค">
+    </label>
+    <button type="button" class="btn-logout" id="btn-logout">Logout</button>
+  </div>
+
+  <div id="confirm-delete-dialog" class="confirm-dialog-overlay" aria-hidden="true">
+    <div class="confirm-dialog">
+      <h3>Confirm Delete</h3>
+      <p id="confirm-delete-message">Delete?</p>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-cancel">Cancel</button>
+        <button type="button" class="btn-confirm-delete">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="img-zoom-overlay" class="img-zoom-overlay" aria-hidden="true">
+    <button type="button" class="img-zoom-close" title="Close">✕</button>
+    <div class="img-zoom-wrap" id="img-zoom-wrap">
+      <img class="img-zoom-image" id="img-zoom-image" src="" alt="">
+    </div>
+    <div class="img-zoom-percent" id="img-zoom-percent">100%</div>
+    <div id="img-zoom-overlay-bar" class="img-zoom-overlay-bar"></div>
+  </div>
+
+  <div id="blocks">
+    <!-- Block 1 -->
+    <div class="block" data-block="0">
+      <button type="button" class="btn-delete-task" title="Delete task">Delete task</button>
+      <div class="col">
+        <span class="col-label">Image Task</span>
+        <div class="img-box view-only" id="img-box-0-task" data-role="task-img" data-side="task" title="Display">
+          <span class="placeholder-text">imagetask</span>
+          <input type="text" class="img-box-caption" placeholder="index #1" maxlength="500" data-role="task-caption">
+        </div>
+        <div class="img-bar-wrap">
+          <div class="img-bar-tool-row">
+            <button type="button" class="btn-bar-upload" title="Upload images">[upload]</button>
+          </div>
+          <div class="img-bar" data-role="task-img-bar" data-side="task">
+            <div class="img-bar-thumbs"></div>
+            <input type="file" accept="image/*" multiple>
+          </div>
+        </div>
+        <div class="comments" data-role="task-comments">
+          <div class="comment-feed"></div>
+          <div class="comment-form">
+            <div class="comment-form-input-wrap">
+              <div class="comment-form-code-row">
+                <button type="button" class="btn-code-mini" title="Insert code block">[code]</button>
+                <button type="button" class="btn-comment-upload" title="Upload image">[upload]</button>
+                <div class="comment-form-code-dropdown">
+                  <button type="button" class="comment-form-code-option" data-lang="bash">bash</button>
+                  <button type="button" class="comment-form-code-option" data-lang="json">json</button>
+                  <button type="button" class="comment-form-code-option" data-lang="js">js</button>
+                  <button type="button" class="comment-form-code-option" data-lang="html">html</button>
+                  <button type="button" class="comment-form-code-option" data-lang="pine">pine</button>
+                  <button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button>
+                  <button type="button" class="comment-form-code-option" data-lang="python">python</button>
+                </div>
+              </div>
+              <div class="comment-form-preview"></div>
+              <input type="file" accept="image/*" multiple class="comment-form-file-input" style="display:none">
+              <textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea>
+            </div>
+            <button type="button" class="btn-post">Post</button>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="col-label">Image Result</span>
+        <div class="img-box view-only" id="img-box-0-result" data-role="result-img" data-side="result" title="Display">
+          <span class="placeholder-text">image result</span>
+          <input type="text" class="img-box-caption" placeholder="index #2" maxlength="500" data-role="result-caption">
+        </div>
+        <div class="img-bar-wrap">
+          <div class="img-bar-tool-row">
+            <button type="button" class="btn-bar-upload" title="Upload images">[upload]</button>
+          </div>
+          <div class="img-bar" data-role="result-img-bar" data-side="result">
+            <div class="img-bar-thumbs"></div>
+            <input type="file" accept="image/*" multiple>
+          </div>
+        </div>
+        <div class="comments" data-role="result-comments">
+          <div class="comment-feed"></div>
+          <div class="comment-form">
+            <div class="comment-form-input-wrap">
+              <div class="comment-form-code-row">
+                <button type="button" class="btn-code-mini" title="Insert code block">[code]</button>
+                <button type="button" class="btn-comment-upload" title="Upload image">[upload]</button>
+                <div class="comment-form-code-dropdown">
+                  <button type="button" class="comment-form-code-option" data-lang="bash">bash</button>
+                  <button type="button" class="comment-form-code-option" data-lang="json">json</button>
+                  <button type="button" class="comment-form-code-option" data-lang="js">js</button>
+                  <button type="button" class="comment-form-code-option" data-lang="html">html</button>
+                  <button type="button" class="comment-form-code-option" data-lang="pine">pine</button>
+                  <button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button>
+                  <button type="button" class="comment-form-code-option" data-lang="python">python</button>
+                </div>
+              </div>
+              <div class="comment-form-preview"></div>
+              <input type="file" accept="image/*" multiple class="comment-form-file-input" style="display:none">
+              <textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea>
+            </div>
+            <button type="button" class="btn-post">Post</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="block-sep"></div>
+
+    <!-- Block 2 -->
+    <div class="block" data-block="1">
+      <button type="button" class="btn-delete-task" title="Delete task">Delete task</button>
+      <div class="col">
+        <span class="col-label">Image Task</span>
+        <div class="img-box view-only" id="img-box-1-task" data-role="task-img" data-side="task" title="Display">
+          <span class="placeholder-text">imagetask</span>
+          <input type="text" class="img-box-caption" placeholder="index #3" maxlength="500" data-role="task-caption">
+        </div>
+        <div class="img-bar-wrap">
+          <div class="img-bar-tool-row">
+            <button type="button" class="btn-bar-upload" title="Upload images">[upload]</button>
+          </div>
+          <div class="img-bar" data-role="task-img-bar" data-side="task">
+            <div class="img-bar-thumbs"></div>
+            <input type="file" accept="image/*" multiple>
+          </div>
+        </div>
+        <div class="comments" data-role="task-comments">
+          <div class="comment-feed"></div>
+          <div class="comment-form">
+            <div class="comment-form-input-wrap">
+              <div class="comment-form-code-row">
+                <button type="button" class="btn-code-mini" title="Insert code block">[code]</button>
+                <button type="button" class="btn-comment-upload" title="Upload image">[upload]</button>
+                <div class="comment-form-code-dropdown">
+                  <button type="button" class="comment-form-code-option" data-lang="bash">bash</button>
+                  <button type="button" class="comment-form-code-option" data-lang="json">json</button>
+                  <button type="button" class="comment-form-code-option" data-lang="js">js</button>
+                  <button type="button" class="comment-form-code-option" data-lang="html">html</button>
+                  <button type="button" class="comment-form-code-option" data-lang="pine">pine</button>
+                  <button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button>
+                  <button type="button" class="comment-form-code-option" data-lang="python">python</button>
+                </div>
+              </div>
+              <div class="comment-form-preview"></div>
+              <input type="file" accept="image/*" multiple class="comment-form-file-input" style="display:none">
+              <textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea>
+            </div>
+            <button type="button" class="btn-post">Post</button>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="col-label">Image Result</span>
+        <div class="img-box view-only" id="img-box-1-result" data-role="result-img" data-side="result" title="Display">
+          <span class="placeholder-text">image result</span>
+          <input type="text" class="img-box-caption" placeholder="index #4" maxlength="500" data-role="result-caption">
+        </div>
+        <div class="img-bar-wrap">
+          <div class="img-bar-tool-row">
+            <button type="button" class="btn-bar-upload" title="Upload images">[upload]</button>
+          </div>
+          <div class="img-bar" data-role="result-img-bar" data-side="result">
+            <div class="img-bar-thumbs"></div>
+            <input type="file" accept="image/*" multiple>
+          </div>
+        </div>
+        <div class="comments" data-role="result-comments">
+          <div class="comment-feed"></div>
+          <div class="comment-form">
+            <div class="comment-form-input-wrap">
+              <div class="comment-form-code-row">
+                <button type="button" class="btn-code-mini" title="Insert code block">[code]</button>
+                <button type="button" class="btn-comment-upload" title="Upload image">[upload]</button>
+                <div class="comment-form-code-dropdown">
+                  <button type="button" class="comment-form-code-option" data-lang="bash">bash</button>
+                  <button type="button" class="comment-form-code-option" data-lang="json">json</button>
+                  <button type="button" class="comment-form-code-option" data-lang="js">js</button>
+                  <button type="button" class="comment-form-code-option" data-lang="html">html</button>
+                  <button type="button" class="comment-form-code-option" data-lang="pine">pine</button>
+                  <button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button>
+                  <button type="button" class="comment-form-code-option" data-lang="python">python</button>
+                </div>
+              </div>
+              <div class="comment-form-preview"></div>
+              <input type="file" accept="image/*" multiple class="comment-form-file-input" style="display:none">
+              <textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea>
+            </div>
+            <button type="button" class="btn-post">Post</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="block-sep"></div>
+
+    <!-- New task button row -->
+    <div class="new-task-row">
+      <button type="button" class="btn-new-task" id="btn-new-task">new task +</button>
+    </div>
+  </div>
+  </div>
+
+  <aside id="task-description-nav" class="task-description-nav" aria-label="Task description navigator" tabindex="0">
+    <div class="task-description-nav-title">Contents</div>
+    <nav class="task-description-nav-list" id="task-description-nav-list"></nav>
+  </aside>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+  <script>
+    function nowStr() {
+      return new Date().toLocaleString();
+    }
+
+    function escapeHtml(s) {
+      var div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function renderTextSegment(seg) {
+      if (!seg) return '';
+      var re = /```(\w*)\n?([\s\S]*?)```/g;
+      var parts = [];
+      var lastIdx = 0;
+      var m;
+      var langMap = { js: 'javascript', html: 'markup', pine: 'javascript' };
+      while ((m = re.exec(seg)) !== null) {
+        if (m.index > lastIdx) parts.push(escapeHtml(seg.slice(lastIdx, m.index)));
+        var lang = (m[1] || '').trim().toLowerCase();
+        var code = m[2].replace(/^\n|\n$/g, '');
+        lang = langMap[lang] || lang;
+        var langSpan = (m[1] || '').trim() ? '<span class="code-block-lang">' + escapeHtml((m[1] || '').trim()) + '</span>' : '';
+        var codeHtml;
+        if (typeof window.Prism !== 'undefined' && window.Prism.highlight && lang && window.Prism.languages[lang]) {
+          try {
+            codeHtml = window.Prism.highlight(code, window.Prism.languages[lang], lang);
+          } catch (e) { codeHtml = escapeHtml(code); }
+        } else {
+          codeHtml = escapeHtml(code);
+        }
+        parts.push(langSpan + '<pre class="code-block"><code class="language-' + escapeHtml(lang) + '">' + codeHtml + '</code></pre>');
+        lastIdx = re.lastIndex;
+      }
+      if (lastIdx < seg.length) parts.push(escapeHtml(seg.slice(lastIdx)));
+      return parts.join('').replace(/\n/g, '<br>');
+    }
+    function renderCommentText(text) {
+      if (!text) return '';
+      var imagePrefix = (typeof getApiPrefix === 'function' ? getApiPrefix() : '') + '/image/';
+      var imageRe = /\[IMAGE:([^\]]+)\]/g;
+      var segments = [];
+      var lastIdx = 0;
+      var im;
+      while ((im = imageRe.exec(text)) !== null) {
+        if (im.index > lastIdx) segments.push({ type: 'text', value: text.slice(lastIdx, im.index) });
+        var filename = (im[1] || '').trim().replace(/^\/+/, '');
+        if (filename) segments.push({ type: 'image', value: filename });
+        lastIdx = imageRe.lastIndex;
+      }
+      if (lastIdx < text.length) segments.push({ type: 'text', value: text.slice(lastIdx) });
+      var out = [];
+      for (var i = 0; i < segments.length; i++) {
+        if (segments[i].type === 'text') out.push(renderTextSegment(segments[i].value));
+        else out.push('<img src="' + escapeHtml(imagePrefix + segments[i].value) + '" class="comment-inline-img" alt="">');
+      }
+      return out.join('');
+    }
+
+    function postComment(commentsEl, text) {
+      postCommentWithTime(commentsEl, text, nowStr());
+    }
+
+    function postCommentWithTime(commentsEl, text, datetime) {
+      text = (text || '').trim();
+      if (!text && !datetime) return;
+      var feed = commentsEl.querySelector('.comment-feed');
+      if (!feed) return;
+      var item = document.createElement('div');
+      item.className = 'comment-item';
+      item.dataset.rawText = text;
+      item.innerHTML =
+        '<div class="comment-text"></div>' +
+        '<div class="comment-time">' + (datetime || nowStr()) + '</div>' +
+        '<div class="comment-actions">' +
+          '<button type="button" class="btn-edit" title="Edit">✎</button>' +
+          '<button type="button" class="btn-delete" title="Delete">✕</button>' +
+        '</div>';
+      item.querySelector('.comment-text').innerHTML = renderCommentText(text);
+      feed.appendChild(item);
+      feed.scrollTop = feed.scrollHeight;
+    }
+
+    function editComment(item) {
+      var textEl = item.querySelector('.comment-text');
+      if (!textEl) return;
+      var current = (item.dataset.rawText || textEl.textContent || '').trim();
+      var input = document.createElement('textarea');
+      input.className = 'comment-edit-input';
+      input.value = current;
+      input.rows = 4;
+      input.style.resize = 'vertical';
+      item.classList.add('editing');
+      textEl.style.display = 'none';
+      textEl.parentNode.insertBefore(input, textEl);
+      input.focus();
+      function save() {
+        var val = input.value.trim();
+        if (val) {
+          item.dataset.rawText = val;
+          textEl.innerHTML = renderCommentText(val);
+        }
+        textEl.style.display = '';
+        input.remove();
+        item.classList.remove('editing');
+        updateDataJsonOnServer();
+      }
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); }
+        if (e.key === 'Escape') { textEl.style.display = ''; input.remove(); item.classList.remove('editing'); }
+      });
+    }
+
+    function deleteComment(item) {
+      if (item && item.parentNode) {
+        item.parentNode.removeChild(item);
+        updateDataJsonOnServer();
+      }
+    }
+
+    // Use same origin when opened from Python server (http://localhost:5000)
+    var API_BASE = '';
+    var UPLOAD_URL = (API_BASE || '') + '/api/upload';
+    var currentProjectId = null;
+    var currentPasskey = '';
+
+    function getApiPrefix() {
+      var base = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : '';
+      if (base) return base;
+      return (window.location.pathname || '').replace(/\/[^/]*$/, '') || '';
+    }
+
+    function getCookie(name) {
+      var match = document.cookie.match(new RegExp('(^|;)\\s*' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+      return match ? decodeURIComponent(match[2]) : null;
+    }
+    function setCookie(name, value, days) {
+      var expires = '';
+      if (days) {
+        var d = new Date();
+        d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+        expires = '; expires=' + d.toUTCString();
+      }
+      document.cookie = name + '=' + encodeURIComponent(value) + expires + '; path=/';
+    }
+    function deleteCookie(name) {
+      document.cookie = name + '=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    }
+
+    function getUpdateDataUrl() {
+      var base = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : '';
+      if (base) return base + '/api/save';
+      var path = (window.location.pathname || '').replace(/\/[^/]*$/, '') || '';
+      return path + '/api/save';
+    }
+
+    var _saveDebounceTimer = null;
+    var _saveDebounceMs = 600;
+    function updateDataJsonOnServer() {
+      clearTimeout(_saveDebounceTimer);
+      _saveDebounceTimer = setTimeout(function doSave() {
+        _saveDebounceTimer = null;
+        var data;
+        try {
+          data = collectData();
+        } catch (err) {
+          console.warn('collectData failed:', err);
+          showSaveStatus('error');
+          return;
+        }
+        var url = getUpdateDataUrl();
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        })
+          .then(function (r) {
+            if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+            return r.json();
+          })
+          .then(function (res) {
+            showSaveStatus('ok', res && res.dataJsonUpdated);
+          })
+          .catch(function (err) {
+            console.warn('Update data.json failed:', err);
+            showSaveStatus('error');
+          });
+      }, _saveDebounceMs);
+    }
+
+    var _imgBarScrollBar = null;
+    var _imgBarScrollStartX = 0;
+    var _imgBarScrollDownX = 0;
+    var _imgBarScrollDownY = 0;
+    var _imgBarScrollDragStarted = false;
+    var _imgBarScrollThreshold = 5;
+    function _imgBarScrollMove(e) {
+      if (!_imgBarScrollBar) return;
+      var thumbs = _imgBarScrollBar.querySelector('.img-bar-thumbs');
+      if (!thumbs) return;
+      if (!_imgBarScrollDragStarted) {
+        if (Math.abs(e.clientX - _imgBarScrollDownX) > _imgBarScrollThreshold ||
+            Math.abs(e.clientY - _imgBarScrollDownY) > _imgBarScrollThreshold) {
+          _imgBarScrollDragStarted = true;
+          _imgBarScrollBar.classList.add('img-bar-drag-scroll');
+          _imgBarScrollStartX = e.clientX;
+        } else return;
+      }
+      var dx = e.clientX - _imgBarScrollStartX;
+      _imgBarScrollStartX = e.clientX;
+      thumbs.scrollLeft -= dx;
+    }
+    function _imgBarScrollEnd() {
+      if (_imgBarScrollBar) {
+        _imgBarScrollBar.classList.remove('img-bar-drag-scroll');
+        if (_imgBarScrollDragStarted) _imgBarScrollBar._scrollDragJustEnded = true;
+      }
+      _imgBarScrollBar = null;
+      _imgBarScrollDragStarted = false;
+      document.removeEventListener('mousemove', _imgBarScrollMove);
+      document.removeEventListener('mouseup', _imgBarScrollEnd);
+    }
+
+    function showSaveStatus(status, dataJsonUpdated) {
+      var el = document.getElementById('save-status');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'save-status';
+        el.style.cssText = 'position:fixed;bottom:16px;right:16px;padding:8px 14px;border-radius:8px;font-size:0.8125rem;z-index:9999;transition:opacity 0.3s;';
+        document.body.appendChild(el);
+      }
+      el.textContent = status === 'ok'
+        ? (dataJsonUpdated ? 'Saved (data.json updated)' : 'Saved')
+        : 'Save failed';
+      el.style.background = status === 'ok' ? '#22c55e' : '#dc2626';
+      el.style.color = '#fff';
+      el.style.opacity = '1';
+      clearTimeout(el._hide);
+      el._hide = setTimeout(function () { el.style.opacity = '0'; }, 2500);
+    }
+
+    function getBarForBox(imgBox) {
+      var next = imgBox && imgBox.nextElementSibling;
+      if (!next) return null;
+      if (next.classList && next.classList.contains('img-bar')) return next;
+      if (next.classList && next.classList.contains('img-bar-wrap')) return next.querySelector('.img-bar') || null;
+      return null;
+    }
+    function getBoxForBar(bar) {
+      var wrap = bar && bar.closest('.img-bar-wrap');
+      var el = wrap || bar;
+      var prev = el.previousElementSibling;
+      return (prev && prev.classList && prev.classList.contains('img-box')) ? prev : null;
+    }
+
+    function getImgBoxFilename(imgBox) {
+      var bar = getBarForBox(imgBox);
+      if (bar) {
+        var thumbs = bar.querySelectorAll('.img-bar-thumb');
+        var idx = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+        var thumb = thumbs[idx] || thumbs[0];
+        if (thumb) return thumb.getAttribute('data-filename') || null;
+        return null;
+      }
+      return imgBox.getAttribute('data-filename') || null;
+    }
+
+    function getImgBoxKey(imgBox) {
+      var bar = getBarForBox(imgBox);
+      if (bar) {
+        var first = bar.querySelector('.img-bar-thumb');
+        if (first) return first.getAttribute('data-key') || null;
+      }
+      return imgBox.getAttribute('data-image-key') || null;
+    }
+
+    function getBarImageKeys(bar) {
+      var thumbs = bar.querySelectorAll('.img-bar-thumb');
+      return Array.from(thumbs).map(function (t) { return t.getAttribute('data-key'); }).filter(Boolean);
+    }
+    function nextBarKey(baseKey, usedKeys) {
+      var max = -1;
+      if (usedKeys[baseKey]) max = 0;
+      Object.keys(usedKeys).forEach(function (k) {
+        if (k === baseKey) max = Math.max(max, 0);
+        else if (k.indexOf(baseKey + '_') === 0) {
+          var n = parseInt(k.slice((baseKey + '_').length), 10);
+          if (!isNaN(n)) max = Math.max(max, n);
+        }
+      });
+      return max < 0 ? baseKey : baseKey + '_' + (max + 1);
+    }
+
+    function setBarSelectedIndex(bar, index) {
+      if (!bar) return;
+      bar.setAttribute('data-selected-index', String(index));
+      bar.querySelectorAll('.img-bar-thumb').forEach(function (t, i) { t.classList.toggle('selected', i === index); });
+    }
+
+    function clearBoxToPlaceholder(box) {
+      var img = box.querySelector('img');
+      if (img) {
+        if (img.dataset.blobUrl) try { URL.revokeObjectURL(img.dataset.blobUrl); } catch (_) {}
+        img.remove();
+      }
+      var actions = box.querySelector('.img-actions');
+      if (actions) actions.remove();
+      box.classList.remove('has-image');
+      box.removeAttribute('data-filename');
+      box.removeAttribute('data-versionimage');
+      var placeholder = document.createElement('span');
+      placeholder.className = 'placeholder-text';
+      placeholder.textContent = box.getAttribute('data-role') === 'task-img' ? 'imagetask' : 'image result';
+      box.appendChild(placeholder);
+    }
+
+    function syncBoxFromBar(box, bar) {
+      if (!box || !bar) return;
+      var thumbs = bar.querySelectorAll('.img-bar-thumb');
+      var idx = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+      var thumb = thumbs[idx] || thumbs[0];
+      if (!thumb) {
+        clearBoxToPlaceholder(box);
+        return;
+      }
+      var filename = thumb.getAttribute('data-filename');
+      var src = thumb.querySelector('img') && thumb.querySelector('img').src;
+      if (!src && filename) {
+        var bases = getDataAndImageBase();
+        var imageBase = bases.imageBase;
+        if (imageBase.length && imageBase.charAt(imageBase.length - 1) !== '/') imageBase += '/';
+        src = imageBase + filename;
+      }
+      if (!src) return;
+      var span = box.querySelector('.placeholder-text');
+      if (span) span.remove();
+      var img = box.querySelector('img');
+      if (!img) { img = document.createElement('img'); box.appendChild(img); }
+      img.removeAttribute('data-blobUrl');
+      img.src = src;
+      if (thumb.querySelector('img').dataset.blobUrl) img.dataset.blobUrl = thumb.querySelector('img').dataset.blobUrl;
+      if (filename) box.setAttribute('data-filename', filename);
+      box.classList.add('has-image');
+      addImageActions(box);
+    }
+
+    function addBarThumb(bar, key, filename, previewUrl, insertIndex) {
+      var bases = getDataAndImageBase();
+      var imageBase = bases.imageBase;
+      if (imageBase.length && imageBase.charAt(imageBase.length - 1) !== '/') imageBase += '/';
+      var src = previewUrl || (imageBase + filename);
+      var container = bar.querySelector('.img-bar-thumbs');
+      if (!container) return;
+      var thumb = document.createElement('div');
+      thumb.className = 'img-bar-thumb';
+      thumb.setAttribute('data-key', key);
+      thumb.setAttribute('data-filename', filename);
+      var im = document.createElement('img');
+      im.src = src;
+      if (previewUrl) im.dataset.blobUrl = previewUrl;
+      thumb.appendChild(im);
+      var btnDel = document.createElement('button');
+      btnDel.type = 'button';
+      btnDel.className = 'btn-bar-thumb-delete';
+      btnDel.title = 'Delete';
+      btnDel.innerHTML = '&#10005;';
+      thumb.appendChild(btnDel);
+      if (insertIndex !== undefined && insertIndex !== null && insertIndex >= 0) {
+        var ref = container.children[insertIndex] || null;
+        container.insertBefore(thumb, ref);
+      } else {
+        container.appendChild(thumb);
+      }
+      if (!bar.hasAttribute('data-selected-index')) setBarSelectedIndex(bar, 0);
+    }
+
+    function removeImageFromBar(bar, index) {
+      if (!bar) return;
+      var thumbs = bar.querySelectorAll('.img-bar-thumb');
+      var thumb = thumbs[index];
+      if (!thumb) return;
+      var im = thumb.querySelector('img');
+      if (im && im.dataset.blobUrl) try { URL.revokeObjectURL(im.dataset.blobUrl); } catch (_) {}
+      thumb.remove();
+      var box = getBoxForBar(bar);
+      var newThumbs = bar.querySelectorAll('.img-bar-thumb');
+      var sel = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+      if (sel >= newThumbs.length) sel = Math.max(0, newThumbs.length - 1);
+      setBarSelectedIndex(bar, newThumbs.length ? sel : 0);
+      if (box) syncBoxFromBar(box, bar);
+      updateDataJsonOnServer();
+    }
+
+    function getCaptionIndex(blockIndex, side) { return blockIndex * 2 + (side === 'task' ? 1 : 2); }
+    function getImgBoxDescription(imgBox, blockIndex, side) {
+      if (!imgBox) return 'index #' + getCaptionIndex(blockIndex, side);
+      var input = imgBox.querySelector('.img-box-caption');
+      var val = input ? input.value.trim() : '';
+      return val || ('index #' + getCaptionIndex(blockIndex, side));
+    }
+    function setImgBoxDescription(imgBox, text) {
+      var input = imgBox && imgBox.querySelector('.img-box-caption');
+      if (input) input.value = text || '';
+    }
+
+    var allowUrlHashUpdateFromScroll = true;
+    function buildTaskDescriptionNav() {
+      var list = document.getElementById('task-description-nav-list');
+      if (!list) return;
+      list.innerHTML = '';
+      var blocks = document.querySelectorAll('#blocks .block');
+      var listIndex = 0;
+      blocks.forEach(function (block) {
+        var blockIndex = block.getAttribute('data-block');
+        var taskBox = block.querySelector('[data-role="task-img"]');
+        var resultBox = block.querySelector('[data-role="result-img"]');
+        if (taskBox) {
+          listIndex += 1;
+          var taskCaption = taskBox.querySelector('.img-box-caption');
+          var taskText = (taskCaption && taskCaption.value.trim()) || (taskCaption && taskCaption.getAttribute('placeholder')) || 'index #' + (parseInt(blockIndex, 10) * 2 + 1);
+          var taskId = 'img-box-' + blockIndex + '-task';
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'task-description-nav-item';
+          btn.setAttribute('data-target-id', taskId);
+          btn.setAttribute('data-full-text', taskText);
+          btn.setAttribute('data-index', String(listIndex));
+          btn.textContent = listIndex + '. ' + taskText;
+          btn.addEventListener('click', function () {
+            var el = document.getElementById(taskId);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              try { window.history.replaceState(null, '', (window.location.pathname + window.location.search) + '#' + taskId); } catch (e) {}
+            }
+          });
+          list.appendChild(btn);
+        }
+        if (resultBox) {
+          listIndex += 1;
+          var resultCaption = resultBox.querySelector('.img-box-caption');
+          var resultText = (resultCaption && resultCaption.value.trim()) || (resultCaption && resultCaption.getAttribute('placeholder')) || 'index #' + (parseInt(blockIndex, 10) * 2 + 2);
+          var resultId = 'img-box-' + blockIndex + '-result';
+          var btn2 = document.createElement('button');
+          btn2.type = 'button';
+          btn2.className = 'task-description-nav-item';
+          btn2.setAttribute('data-target-id', resultId);
+          btn2.setAttribute('data-full-text', resultText);
+          btn2.setAttribute('data-index', String(listIndex));
+          btn2.textContent = listIndex + '. ' + resultText;
+          btn2.addEventListener('click', function () {
+            var el = document.getElementById(resultId);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              try { window.history.replaceState(null, '', (window.location.pathname + window.location.search) + '#' + resultId); } catch (e) {}
+            }
+          });
+          list.appendChild(btn2);
+        }
+      });
+      updateTaskDescriptionNavHighlight();
+      updateTaskDescriptionNavViewport();
+      if (window.location.hash) {
+        var id = window.location.hash.replace(/^#/, '');
+        var el = document.getElementById(id);
+        if (el) {
+          allowUrlHashUpdateFromScroll = false;
+          el.scrollIntoView({ behavior: 'auto', block: 'start' });
+          requestAnimationFrame(updateTaskDescriptionNavHighlight);
+          setTimeout(function () { allowUrlHashUpdateFromScroll = true; }, 600);
+        }
+      }
+    }
+
+    function updateTaskDescriptionNavViewport() {
+      var nav = document.getElementById('task-description-nav');
+      var list = document.getElementById('task-description-nav-list');
+      var titleEl = nav && nav.querySelector('.task-description-nav-title');
+      if (!nav || !list) return;
+      var w = window.innerWidth;
+      var items = list.querySelectorAll('.task-description-nav-item');
+      nav.classList.remove('nav-mode-hide', 'nav-mode-mini');
+      if (w < 640) {
+        nav.classList.add('nav-mode-hide');
+      } else if (w < 1024) {
+        nav.classList.add('nav-mode-mini');
+        items.forEach(function (item) {
+          var idx = item.getAttribute('data-index') || '';
+          var full = item.getAttribute('data-full-text') || '';
+          var short = full.length <= 3 ? full : full.slice(0, 3) + '...';
+          item.textContent = idx ? idx + '. ' + short : short;
+        });
+        if (titleEl) titleEl.textContent = 'Con...';
+      } else {
+        items.forEach(function (item) {
+          var idx = item.getAttribute('data-index') || '';
+          var full = item.getAttribute('data-full-text') || '';
+          item.textContent = idx ? idx + '. ' + full : full;
+        });
+        if (titleEl) titleEl.textContent = 'Contents';
+      }
+    }
+
+    function updateTaskDescriptionNavHighlight() {
+      var list = document.getElementById('task-description-nav-list');
+      if (!list) return;
+      var items = list.querySelectorAll('.task-description-nav-item');
+      if (!items.length) return;
+      var targetId = null;
+      var threshold = 120;
+      var blocks = document.querySelectorAll('#blocks .block');
+      blocks.forEach(function (block) {
+        var taskBox = block.querySelector('[data-role="task-img"]');
+        var resultBox = block.querySelector('[data-role="result-img"]');
+        [taskBox, resultBox].forEach(function (box) {
+          if (!box || !box.id) return;
+          var rect = box.getBoundingClientRect();
+          if (rect.top <= threshold && rect.bottom > 0) targetId = box.id;
+        });
+      });
+      if (!targetId) {
+        var maxBottom = 0;
+        blocks.forEach(function (block) {
+          var taskBox = block.querySelector('[data-role="task-img"]');
+          var resultBox = block.querySelector('[data-role="result-img"]');
+          [taskBox, resultBox].forEach(function (box) {
+            if (!box || !box.id) return;
+            var rect = box.getBoundingClientRect();
+            if (rect.bottom > 0 && rect.top < window.innerHeight && rect.bottom > maxBottom) {
+              maxBottom = rect.bottom;
+              targetId = box.id;
+            }
+          });
+        });
+      }
+      if (!targetId && items.length) targetId = items[0].getAttribute('data-target-id');
+      items.forEach(function (item) {
+        item.classList.toggle('task-description-nav-item-active', item.getAttribute('data-target-id') === targetId);
+      });
+      if (allowUrlHashUpdateFromScroll && targetId && window.location.hash.replace(/^#/, '') !== targetId) {
+        try {
+          window.history.replaceState(null, '', (window.location.pathname + window.location.search) + '#' + targetId);
+        } catch (e) {}
+      }
+    }
+
+    function setTaskDescriptionNavActiveByIndex(index, useSmooth) {
+      var list = document.getElementById('task-description-nav-list');
+      if (!list) return;
+      var items = list.querySelectorAll('.task-description-nav-item');
+      if (!items.length || index < 0 || index >= items.length) return;
+      var targetId = items[index].getAttribute('data-target-id');
+      items.forEach(function (item, i) { item.classList.toggle('task-description-nav-item-active', i === index); });
+      var el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: useSmooth !== false ? 'smooth' : 'auto', block: 'start' });
+        try { window.history.replaceState(null, '', (window.location.pathname + window.location.search) + '#' + targetId); } catch (e) {}
+      }
+    }
+
+    function getCurrentTaskDescriptionNavIndex() {
+      var list = document.getElementById('task-description-nav-list');
+      if (!list) return 0;
+      var items = list.querySelectorAll('.task-description-nav-item');
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].classList.contains('task-description-nav-item-active')) return i;
+      }
+      return 0;
+    }
+
+    function getCommentsData(commentsEl) {
+      var items = commentsEl.querySelectorAll('.comment-item');
+      return Array.from(items).map(function (item) {
+        var raw = item.dataset.rawText;
+        var text = item.querySelector('.comment-text');
+        var time = item.querySelector('.comment-time');
+        return {
+          comment: (raw !== undefined && raw !== '') ? raw : (text ? text.textContent.trim() : ''),
+          datetime: time ? time.textContent.trim() : ''
+        };
+      });
+    }
+
+    function createBlock(index, skipBind) {
+      const sep = document.createElement('div');
+      sep.className = 'block-sep';
+      const block = document.createElement('div');
+      block.className = 'block';
+      block.dataset.block = String(index);
+      block.innerHTML =
+        '<button type="button" class="btn-delete-task" title="Delete task">Delete task</button>' +
+        '<div class="col">' +
+          '<span class="col-label">Image Task</span>' +
+          '<div class="img-box view-only" id="img-box-' + index + '-task" data-role="task-img" data-side="task" title="Display">' +
+            '<span class="placeholder-text">imagetask</span>' +
+            '<input type="text" class="img-box-caption" placeholder="index #' + (index * 2 + 1) + '" maxlength="500" data-role="task-caption">' +
+          '</div>' +
+          '<div class="img-bar-wrap">' +
+            '<div class="img-bar-tool-row"><button type="button" class="btn-bar-upload" title="Upload images">[upload]</button></div>' +
+            '<div class="img-bar" data-role="task-img-bar" data-side="task">' +
+            '<div class="img-bar-thumbs"></div>' +
+            '<input type="file" accept="image/*" multiple>' +
+            '</div></div>' +
+          '<div class="comments" data-role="task-comments">' +
+            '<div class="comment-feed"></div>' +
+            '<div class="comment-form"><div class="comment-form-input-wrap"><div class="comment-form-code-row"><button type="button" class="btn-code-mini" title="Insert code block">[code]</button><button type="button" class="btn-comment-upload" title="Upload image">[upload]</button><div class="comment-form-code-dropdown"><button type="button" class="comment-form-code-option" data-lang="bash">bash</button><button type="button" class="comment-form-code-option" data-lang="json">json</button><button type="button" class="comment-form-code-option" data-lang="js">js</button><button type="button" class="comment-form-code-option" data-lang="html">html</button><button type="button" class="comment-form-code-option" data-lang="pine">pine</button><button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button><button type="button" class="comment-form-code-option" data-lang="python">python</button></div></div><div class="comment-form-preview"></div><input type="file" accept="image/*" multiple class="comment-form-file-input" style="display:none"><textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea></div><button type="button" class="btn-post">Post</button></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="col">' +
+          '<span class="col-label">Image Result</span>' +
+          '<div class="img-box view-only" id="img-box-' + index + '-result" data-role="result-img" data-side="result" title="Display">' +
+            '<span class="placeholder-text">image result</span>' +
+            '<input type="text" class="img-box-caption" placeholder="index #' + (index * 2 + 2) + '" maxlength="500" data-role="result-caption">' +
+          '</div>' +
+          '<div class="img-bar-wrap">' +
+            '<div class="img-bar-tool-row"><button type="button" class="btn-bar-upload" title="Upload images">[upload]</button></div>' +
+            '<div class="img-bar" data-role="result-img-bar" data-side="result">' +
+            '<div class="img-bar-thumbs"></div>' +
+            '<input type="file" accept="image/*" multiple>' +
+            '</div></div>' +
+          '<div class="comments" data-role="result-comments">' +
+            '<div class="comment-feed"></div>' +
+            '<div class="comment-form"><div class="comment-form-input-wrap"><div class="comment-form-code-row"><button type="button" class="btn-code-mini" title="Insert code block">[code]</button><button type="button" class="btn-comment-upload" title="Upload image">[upload]</button><div class="comment-form-code-dropdown"><button type="button" class="comment-form-code-option" data-lang="bash">bash</button><button type="button" class="comment-form-code-option" data-lang="json">json</button><button type="button" class="comment-form-code-option" data-lang="js">js</button><button type="button" class="comment-form-code-option" data-lang="html">html</button><button type="button" class="comment-form-code-option" data-lang="pine">pine</button><button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button><button type="button" class="comment-form-code-option" data-lang="python">python</button></div></div><div class="comment-form-preview"></div><input type="file" accept="image/*" multiple class="comment-form-file-input" style="display:none"><textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea></div><button type="button" class="btn-post">Post</button></div>' +
+          '</div>' +
+        '</div>';
+      if (!skipBind) bindBlockEvents(block);
+      return { block, sep };
+    }
+
+    function addImageActions(box) {
+      if (box.querySelector('.img-actions')) return;
+      var actions = document.createElement('div');
+      actions.className = 'img-actions';
+      actions.innerHTML = '<button type="button" class="btn-edit-img" title="Edit">✎</button><button type="button" class="btn-replace-img" title="Change image">↻</button><button type="button" class="btn-delete-img" title="Delete">✕</button>';
+      box.appendChild(actions);
+      box.classList.add('has-image');
+    }
+
+    function setBoxImageFromUrl(box, imageUrl, filename) {
+      if (!imageUrl) return;
+      var version = box.getAttribute('data-versionimage') || String(Date.now());
+      box.setAttribute('data-versionimage', version);
+      var urlWithVersion = imageUrl + (imageUrl.indexOf('?') >= 0 ? '&' : '?') + 'v=' + version;
+      var span = box.querySelector('.placeholder-text');
+      var hint = box.querySelector('.upload-hint');
+      if (span) span.remove();
+      if (hint) hint.remove();
+      var img = box.querySelector('img');
+      if (!img) {
+        img = document.createElement('img');
+        box.appendChild(img);
+      }
+      img.removeAttribute('data-blobUrl');
+      img.onerror = function () {
+        img.style.background = '#3f3f46';
+        img.alt = 'Load failed: ' + (filename || '');
+      };
+      img.onload = function () { img.onerror = null; };
+      img.src = urlWithVersion;
+      if (filename) box.setAttribute('data-filename', filename);
+      box.classList.add('has-image');
+      addImageActions(box);
+    }
+
+    function getDataAndImageBase() {
+      var base = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : '';
+      var path = (window.location.pathname || '').replace(/\/[^/]*$/, '') || '';
+      var prefix = base || path;
+      return {
+        dataUrl: prefix + '/api/data',
+        dataUrlFallback: prefix + '/data.json',
+        imageBase: prefix + '/image/'
+      };
+    }
+
+    function applyProjectData(data) {
+      if (!data || !data.tasks || !Array.isArray(data.tasks) || data.tasks.length === 0) return;
+      var imageIndex = data.imageIndex || {};
+      var tasks = data.tasks;
+      var container = document.getElementById('blocks');
+      var newTaskRow = container.querySelector('.new-task-row');
+      if (!newTaskRow) return;
+      var bases = getDataAndImageBase();
+      var imageBase = bases.imageBase;
+      if (imageBase.length && imageBase.charAt(imageBase.length - 1) !== '/') imageBase += '/';
+      while (container.firstChild && container.firstChild !== newTaskRow) container.removeChild(container.firstChild);
+      for (var i = 0; i < tasks.length; i++) {
+        var out = createBlock(i, true);
+        var block = out.block;
+        var sep = out.sep;
+        container.insertBefore(sep, newTaskRow);
+        container.insertBefore(block, newTaskRow);
+        var taskImgBox = block.querySelector('[data-role="task-img"]');
+        var resultImgBox = block.querySelector('[data-role="result-img"]');
+        var taskBar = getBarForBox(taskImgBox);
+        var resultBar = getBarForBox(resultImgBox);
+        var taskCommentsEl = block.querySelector('[data-role="task-comments"]');
+        var resultCommentsEl = block.querySelector('[data-role="result-comments"]');
+        var taskKeysRaw = tasks[i].taskImageKeys || (tasks[i].taskImage ? [tasks[i].taskImage] : []);
+        var resultKeysRaw = tasks[i].resultImageKeys || (tasks[i].resultImage ? [tasks[i].resultImage] : []);
+        var taskKeys = [];
+        var taskSeen = {};
+        taskKeysRaw.forEach(function (k) { if (k && !taskSeen[k]) { taskSeen[k] = true; taskKeys.push(k); } });
+        var resultKeys = [];
+        var resultSeen = {};
+        resultKeysRaw.forEach(function (k) { if (k && !resultSeen[k]) { resultSeen[k] = true; resultKeys.push(k); } });
+        if (taskBar && taskKeys.length) {
+          taskKeys.forEach(function (k) {
+            var fn = imageIndex[k];
+            if (fn) addBarThumb(taskBar, k, fn, null);
+          });
+          taskBar.setAttribute('data-next-index', String(taskKeys.length));
+          setBarSelectedIndex(taskBar, 0);
+          if (taskImgBox) syncBoxFromBar(taskImgBox, taskBar);
+        } else if (taskImgBox && imageIndex[tasks[i].taskImage]) {
+          setBoxImageFromUrl(taskImgBox, imageBase + imageIndex[tasks[i].taskImage], imageIndex[tasks[i].taskImage]);
+        }
+        if (resultBar && resultKeys.length) {
+          resultKeys.forEach(function (k) {
+            var fn = imageIndex[k];
+            if (fn) addBarThumb(resultBar, k, fn, null);
+          });
+          resultBar.setAttribute('data-next-index', String(resultKeys.length));
+          setBarSelectedIndex(resultBar, 0);
+          if (resultImgBox) syncBoxFromBar(resultImgBox, resultBar);
+        } else         if (resultImgBox && imageIndex[tasks[i].resultImage]) {
+          setBoxImageFromUrl(resultImgBox, imageBase + imageIndex[tasks[i].resultImage], imageIndex[tasks[i].resultImage]);
+        }
+        setImgBoxDescription(taskImgBox, tasks[i].taskDescription);
+        setImgBoxDescription(resultImgBox, tasks[i].resultDescription);
+        if (taskCommentsEl && tasks[i].taskComments && tasks[i].taskComments.length) {
+          tasks[i].taskComments.forEach(function (c) {
+            postCommentWithTime(taskCommentsEl, c.comment, c.datetime);
+          });
+        }
+        if (resultCommentsEl && tasks[i].resultComments && tasks[i].resultComments.length) {
+          tasks[i].resultComments.forEach(function (c) {
+            postCommentWithTime(resultCommentsEl, c.comment, c.datetime);
+          });
+        }
+      }
+      container.querySelectorAll('.block').forEach(bindBlockEvents);
+      buildTaskDescriptionNav();
+      var switchPublic = document.getElementById('switch-public');
+      if (switchPublic) switchPublic.checked = !!(data.publicGlobal);
+    }
+
+    function loadDataFromJson() {
+      var bases = getDataAndImageBase();
+      var dataUrl = bases.dataUrl + (bases.dataUrl.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+      var fallbackUrl = bases.dataUrlFallback + (bases.dataUrlFallback.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+      console.log('[Load data] Fetching:', dataUrl);
+      function doFetch(url) {
+        return fetch(url).then(function (r) {
+          if (!r.ok) return Promise.reject(new Error(r.status + ' ' + r.statusText));
+          return r.json();
+        });
+      }
+      return doFetch(dataUrl)
+        .catch(function (err) {
+          console.warn('[Load data] /api/data failed, trying /data.json:', err.message);
+          return doFetch(fallbackUrl);
+        })
+        .then(function (data) { return data; })
+        .catch(function (err) {
+          console.error('[Load data] Fetch or parse error:', err);
+          return null;
+        })
+        .then(function (data) {
+          if (!data) {
+            console.warn('[Load data] No data, using default blocks');
+            return false;
+          }
+          if (!data.tasks || !Array.isArray(data.tasks)) {
+            console.warn('[Load data] Invalid data: missing or invalid tasks', data);
+            return false;
+          }
+          if (data.tasks.length === 0) {
+            console.warn('[Load data] Empty tasks, using default blocks');
+            return false;
+          }
+          var imageIndex = data.imageIndex || {};
+          var tasks = data.tasks;
+          var container = document.getElementById('blocks');
+          var newTaskRow = container.querySelector('.new-task-row');
+          if (!newTaskRow) {
+            console.error('[Load data] DOM: .new-task-row not found');
+            return false;
+          }
+          try {
+            applyProjectData(data);
+            console.log('[Load data] Loaded', data.tasks.length, 'tasks');
+            return true;
+          } catch (err) {
+            console.error('[Load data] Error building UI:', err);
+            return false;
+          }
+        });
+    }
+
+    function removeImage(box) {
+      var bar = getBarForBox(box);
+      if (bar) {
+        var idx = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+        removeImageFromBar(bar, idx);
+        return;
+      }
+      var img = box.querySelector('img');
+      if (img) {
+        if (img.dataset.blobUrl) try { URL.revokeObjectURL(img.dataset.blobUrl); } catch (_) {}
+        img.remove();
+      }
+      var actions = box.querySelector('.img-actions');
+      if (actions) actions.remove();
+      box.classList.remove('has-image');
+      box.removeAttribute('data-filename');
+      box.removeAttribute('data-versionimage');
+      var placeholder = document.createElement('span');
+      placeholder.className = 'placeholder-text';
+      placeholder.textContent = box.getAttribute('data-role') === 'task-img' ? 'imagetask' : 'image result';
+      box.appendChild(placeholder);
+      var input = box.querySelector('input[type="file"]');
+      if (input) input.value = '';
+      updateDataJsonOnServer();
+    }
+
+    var imgZoomScale = 0.9;
+    var imgZoomOffsetX = 0;
+    var imgZoomOffsetY = 0;
+    var imgZoomMountX = 0;
+    var imgZoomMountY = 0;
+
+    function imgZoomReset() {
+      imgZoomOffsetX = 0;
+      imgZoomOffsetY = 0;
+      imgZoomMountX = 0;
+      imgZoomMountY = 0;
+      imgZoomScale = 0.9;
+    }
+
+    function imgZoomApplyTransform() {
+      var wrap = document.getElementById('img-zoom-wrap');
+      if (!wrap) return;
+      wrap.style.transform = 'translate(' + imgZoomOffsetX + 'px,' + imgZoomOffsetY + 'px) scale(' + imgZoomScale.toFixed(1) + ')';
+    }
+
+    function imgZoomShowPercent() {
+      var el = document.getElementById('img-zoom-percent');
+      if (!el) return;
+      var cal = ((imgZoomScale - 1) * 100);
+      var cal_ = (cal < 10 && cal > 0) ? 0 : (cal > -10 && cal < 0) ? 0 : Math.round(cal);
+      el.textContent = cal_ + '%';
+      el.classList.add('show');
+      clearTimeout(el._zoomHide);
+      el._zoomHide = setTimeout(function () { el.classList.remove('show'); }, 3000);
+    }
+
+    function openLightbox(src, imgBox) {
+      var overlay = document.getElementById('img-zoom-overlay');
+      var wrap = document.getElementById('img-zoom-wrap');
+      var imgEl = document.getElementById('img-zoom-image');
+      var overlayBar = document.getElementById('img-zoom-overlay-bar');
+      if (!overlay || !wrap || !imgEl) return;
+      imgZoomReset();
+      imgEl.src = src;
+      wrap.style.left = '';
+      wrap.style.top = '';
+      imgZoomApplyTransform();
+      if (overlayBar) {
+        overlayBar.innerHTML = '';
+        if (imgBox) {
+          var bar = getBarForBox(imgBox);
+          if (bar) {
+            var thumbs = bar.querySelectorAll('.img-bar-thumb');
+            var selIdx = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+            thumbs.forEach(function (thumb, i) {
+              var im = thumb.querySelector('img');
+              if (!im || !im.src) return;
+              var cell = document.createElement('div');
+              cell.className = 'img-zoom-overlay-bar-thumb' + (i === selIdx ? ' selected' : '');
+              cell.setAttribute('data-index', String(i));
+              var clone = document.createElement('img');
+              clone.src = im.src;
+              clone.alt = '';
+              cell.appendChild(clone);
+              cell.addEventListener('click', function () {
+                var s = this.getAttribute('data-index');
+                var idx = s ? parseInt(s, 10) : 0;
+                var t = thumbs[idx];
+                if (t) {
+                  var imgSrc = t.querySelector('img') && t.querySelector('img').src;
+                  if (imgSrc) imgEl.src = imgSrc;
+                  overlayBar.querySelectorAll('.img-zoom-overlay-bar-thumb').forEach(function (el, k) {
+                    el.classList.toggle('selected', k === idx);
+                  });
+                }
+              });
+              overlayBar.appendChild(cell);
+            });
+          }
+        }
+      }
+      overlay.classList.add('active');
+      overlay.setAttribute('aria-hidden', 'false');
+      overlay.addEventListener('wheel', imgZoomOnWheel, { passive: false });
+      overlay.addEventListener('mousedown', imgZoomStartDrag);
+      wrap.addEventListener('mousedown', imgZoomStartDrag);
+    }
+
+    function closeLightbox() {
+      var overlay = document.getElementById('img-zoom-overlay');
+      if (!overlay) return;
+      overlay.classList.remove('active');
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.removeEventListener('wheel', imgZoomOnWheel);
+      overlay.removeEventListener('mousedown', imgZoomStartDrag);
+      var wrap = document.getElementById('img-zoom-wrap');
+      if (wrap) wrap.removeEventListener('mousedown', imgZoomStartDrag);
+      document.removeEventListener('mousemove', imgZoomDrag);
+      document.removeEventListener('mouseup', imgZoomEndDrag);
+      var overlayBar = document.getElementById('img-zoom-overlay-bar');
+      if (overlayBar) overlayBar.innerHTML = '';
+    }
+
+    function imgZoomOnWheel(e) {
+      e.preventDefault();
+      if (e.deltaY > 0) {
+        if (imgZoomScale > 2) imgZoomScale = Math.max(0.2, imgZoomScale - 0.1);
+        else if (imgZoomScale > 1) imgZoomScale = Math.max(0.2, imgZoomScale - 0.2);
+        else imgZoomScale = Math.max(0.2, imgZoomScale - 0.1);
+      } else {
+        if (imgZoomScale > 2) imgZoomScale = Math.min(20, imgZoomScale + 1);
+        else if (imgZoomScale > 1) imgZoomScale = Math.min(20, imgZoomScale + 0.2);
+        else imgZoomScale = Math.min(20, imgZoomScale + 0.1);
+      }
+      imgZoomApplyTransform();
+      imgZoomShowPercent();
+    }
+
+    function imgZoomStartDrag(e) {
+      imgZoomMountX = e.clientX;
+      imgZoomMountY = e.clientY;
+      e.preventDefault();
+      document.addEventListener('mousemove', imgZoomDrag);
+      document.addEventListener('mouseup', imgZoomEndDrag);
+    }
+
+    function imgZoomDrag(e) {
+      e.preventDefault();
+      var dx = imgZoomMountX - e.clientX;
+      var dy = imgZoomMountY - e.clientY;
+      imgZoomOffsetX -= dx;
+      imgZoomOffsetY -= dy;
+      imgZoomMountX = e.clientX;
+      imgZoomMountY = e.clientY;
+      imgZoomApplyTransform();
+    }
+
+    function imgZoomEndDrag() {
+      document.removeEventListener('mousemove', imgZoomDrag);
+      document.removeEventListener('mouseup', imgZoomEndDrag);
+    }
+
+    function uploadImage(file, box, blockIndex, side) {
+      var bar = getBarForBox(box);
+      if (bar) {
+        uploadImageToBar(file, bar, blockIndex, side);
+        return;
+      }
+      const key = side + '_' + blockIndex;
+      box.setAttribute('data-image-key', key);
+      const form = new FormData();
+      form.append('image', file);
+      box.classList.add('uploading');
+      fetch(UPLOAD_URL, { method: 'POST', body: form })
+        .then(function (r) {
+          if (!r.ok) throw new Error('Upload failed');
+          return r.json();
+        })
+        .then(function (data) {
+          const filename = data.filename;
+          box.setAttribute('data-filename', filename);
+          box.classList.remove('uploading');
+          const span = box.querySelector('.placeholder-text');
+          const hint = box.querySelector('.upload-hint');
+          if (span) span.remove();
+          if (hint) hint.remove();
+          let img = box.querySelector('img');
+          if (!img) {
+            img = document.createElement('img');
+            box.appendChild(img);
+          }
+          if (img.dataset.blobUrl) try { URL.revokeObjectURL(img.dataset.blobUrl); } catch (_) {}
+          box.setAttribute('data-versionimage', String(Date.now()));
+          var previewUrl = URL.createObjectURL(file);
+          img.src = previewUrl;
+          img.dataset.blobUrl = previewUrl;
+          addImageActions(box);
+          updateDataJsonOnServer();
+        })
+        .catch(function (err) {
+          box.classList.remove('uploading');
+          alert('Upload failed: ' + (err.message || err));
+        });
+    }
+
+    function uploadImageToBar(file, bar, blockIndex, side, explicitIndex) {
+      if (!file || !file.type.startsWith('image/')) return Promise.resolve();
+      var baseKey = side + '_' + blockIndex;
+      var nextIdx;
+      if (explicitIndex !== undefined && explicitIndex !== null && explicitIndex >= 0) {
+        nextIdx = explicitIndex;
+      } else {
+        nextIdx = parseInt(bar.getAttribute('data-next-index') || '0', 10);
+        bar.setAttribute('data-next-index', String(nextIdx + 1));
+      }
+      var key = nextIdx === 0 ? baseKey : baseKey + '_' + nextIdx;
+      var form = new FormData();
+      form.append('image', file);
+      bar.classList.add('uploading');
+      return fetch(UPLOAD_URL, { method: 'POST', body: form })
+        .then(function (r) {
+          if (!r.ok) throw new Error('Upload failed');
+          return r.json();
+        })
+        .then(function (data) {
+          var filename = data.filename;
+          bar.classList.remove('uploading');
+          var previewUrl = URL.createObjectURL(file);
+          addBarThumb(bar, key, filename, previewUrl, nextIdx);
+          var box = getBoxForBar(bar);
+          if (box && nextIdx === 0) {
+            setBarSelectedIndex(bar, 0);
+            syncBoxFromBar(box, bar);
+          }
+          updateDataJsonOnServer();
+        })
+        .catch(function (err) {
+          bar.classList.remove('uploading');
+          bar.setAttribute('data-next-index', String(nextIdx));
+          alert('Upload failed: ' + (err.message || err));
+          throw err;
+        });
+    }
+
+    function bindCommentForm(form) {
+      var commentsEl = form.closest('.comments');
+      var input = form.querySelector('textarea') || form.querySelector('input');
+      var previewEl = form.querySelector('.comment-form-preview');
+      var fileInput = form.querySelector('.comment-form-file-input');
+      if (!commentsEl || !input) return;
+      form._commentImageFiles = form._commentImageFiles || [];
+      function addCommentImage(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        form._commentImageFiles.push(file);
+        var url = URL.createObjectURL(file);
+        var wrap = document.createElement('div');
+        wrap.className = 'comment-form-preview-item';
+        var img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        img.addEventListener('click', function (e) { e.stopPropagation(); openLightbox(img.src, null); });
+        var rm = document.createElement('button');
+        rm.type = 'button';
+        rm.className = 'comment-form-preview-remove';
+        rm.innerHTML = '&#215;';
+        rm.setAttribute('aria-label', 'Remove');
+        rm.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var idx = Array.from(previewEl.children).indexOf(wrap);
+          if (idx >= 0) form._commentImageFiles.splice(idx, 1);
+          try { URL.revokeObjectURL(url); } catch (_) {}
+          wrap.remove();
+        });
+        wrap.appendChild(img);
+        wrap.appendChild(rm);
+        previewEl.appendChild(wrap);
+      }
+      function clearCommentImages() {
+        form._commentImageFiles = [];
+        if (previewEl) {
+          previewEl.querySelectorAll('img').forEach(function (img) {
+            var u = img.src;
+            if (u && u.indexOf('blob:') === 0) try { URL.revokeObjectURL(u); } catch (_) {}
+          });
+          previewEl.innerHTML = '';
+        }
+        if (fileInput) fileInput.value = '';
+      }
+      function submit() {
+        var val = input.value.trim();
+        var files = form._commentImageFiles || [];
+        if (!val && !files.length) return;
+        function doPost(finalText) {
+          postCommentWithTime(commentsEl, finalText, nowStr());
+          input.value = '';
+          clearCommentImages();
+          updateDataJsonOnServer();
+        }
+        if (!files.length) {
+          doPost(val);
+          return;
+        }
+        var p = Promise.resolve();
+        var filenames = [];
+        files.forEach(function (file) {
+          p = p.then(function () {
+            var fd = new FormData();
+            fd.append('image', file);
+            return fetch(UPLOAD_URL, { method: 'POST', body: fd })
+              .then(function (r) {
+                if (!r.ok) throw new Error('Upload failed');
+                return r.json();
+              })
+              .then(function (data) {
+                filenames.push(data.filename);
+              });
+          });
+        });
+        p.then(function () {
+          var imagePart = filenames.map(function (f) { return '[IMAGE:' + f + ']'; }).join('\n');
+          var finalText = val ? val + '\n' + imagePart : imagePart;
+          doPost(finalText);
+        }).catch(function (err) {
+          alert('Upload failed: ' + (err.message || err));
+        });
+      }
+      form.querySelector('.btn-post').addEventListener('click', submit);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); submit(); }
+      });
+      if (fileInput) {
+        var btnUpload = form.querySelector('.btn-comment-upload');
+        if (btnUpload) btnUpload.addEventListener('click', function () { fileInput.click(); });
+        fileInput.addEventListener('change', function () {
+          var files = fileInput.files;
+          if (files) for (var i = 0; i < files.length; i++) addCommentImage(files[i]);
+          fileInput.value = '';
+        });
+      }
+      input.addEventListener('paste', function (e) {
+        var items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf('image/') === 0) {
+            e.preventDefault();
+            var file = items[i].getAsFile();
+            if (file) addCommentImage(file);
+            break;
+          }
+        }
+      });
+      var wrap = form.querySelector('.comment-form-input-wrap');
+      if (wrap) {
+        wrap.addEventListener('dragover', function (e) {
+          if (e.dataTransfer.types.indexOf('Files') >= 0) { e.preventDefault(); e.stopPropagation(); wrap.classList.add('drag-over'); }
+        });
+        wrap.addEventListener('dragleave', function (e) {
+          if (!wrap.contains(e.relatedTarget)) wrap.classList.remove('drag-over');
+        });
+        wrap.addEventListener('drop', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          wrap.classList.remove('drag-over');
+          var files = e.dataTransfer.files;
+          if (files) for (var i = 0; i < files.length; i++) addCommentImage(files[i]);
+        });
+      }
+      var codeRow = form.querySelector('.comment-form-code-row');
+      var codeDropdown = form.querySelector('.comment-form-code-dropdown');
+      var btnCode = form.querySelector('.btn-code-mini');
+      if (btnCode && codeDropdown) {
+        btnCode.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var wasVisible = codeDropdown.classList.contains('visible');
+          codeDropdown.classList.toggle('visible');
+          if (!wasVisible && codeDropdown.classList.contains('visible')) {
+            var closeOnce = function () {
+              document.removeEventListener('click', closeOnce);
+              codeDropdown.classList.remove('visible');
+            };
+            setTimeout(function () { document.addEventListener('click', closeOnce); }, 0);
+            input.focus();
+          }
+        });
+        form.querySelectorAll('.comment-form-code-option').forEach(function (opt) {
+          opt.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var lang = opt.getAttribute('data-lang') || 'bash';
+            var template = '```' + lang + '\n//Enter code here\n```';
+            var start = input.selectionStart;
+            var end = input.selectionEnd;
+            var before = input.value.slice(0, start);
+            var after = input.value.slice(end);
+            input.value = before + template + after;
+            input.selectionStart = input.selectionEnd = start + template.length;
+            codeDropdown.classList.remove('visible');
+            input.focus();
+          });
+        });
+      }
+    }
+
+    function bindBlockEvents(block) {
+      var blockIndex = (block.getAttribute && block.getAttribute('data-block')) !== null
+        ? block.getAttribute('data-block') : String(document.querySelectorAll('#blocks .block').length - 1);
+      block.querySelectorAll('.comment-form').forEach(bindCommentForm);
+      block.querySelectorAll('.img-box').forEach(function (box) {
+        if (box.classList.contains('view-only')) {
+          box.addEventListener('click', function (e) {
+            if (e.target.closest('.img-actions')) return;
+            if (e.target.closest('.img-box-caption')) return;
+            if (e.target.tagName === 'IMG') { openLightbox(e.target.src, e.target.closest('.img-box')); }
+          });
+          box.querySelectorAll('.img-box-caption').forEach(function (input) {
+            input.addEventListener('click', function (e) { e.stopPropagation(); });
+            input.addEventListener('blur', function () { updateDataJsonOnServer(); buildTaskDescriptionNav(); });
+          });
+          var side = box.getAttribute('data-side') || (box.getAttribute('data-role') === 'task-img' ? 'task' : 'result');
+          var bar = getBarForBox(box);
+          box.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer.types.indexOf('Files') >= 0) box.classList.add('drag-over');
+          });
+          box.addEventListener('dragleave', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!box.contains(e.relatedTarget)) box.classList.remove('drag-over');
+          });
+          box.addEventListener('drop', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            box.classList.remove('drag-over');
+            var files = e.dataTransfer.files;
+            if (!files || !files.length) return;
+            if (bar) {
+              var imageFiles = [];
+              for (var i = 0; i < files.length; i++) {
+                if (files[i].type.startsWith('image/')) imageFiles.push(files[i]);
+              }
+              if (!imageFiles.length) return;
+              var startIdx = parseInt(bar.getAttribute('data-next-index') || '0', 10);
+              bar.setAttribute('data-next-index', String(startIdx + imageFiles.length));
+              var p = Promise.resolve();
+              for (var j = 0; j < imageFiles.length; j++) {
+                p = p.then(function (f, idx) { return uploadImageToBar(f, bar, blockIndex, side, idx); }.bind(null, imageFiles[j], startIdx + j));
+              }
+            } else {
+              var file = files[0];
+              if (file && file.type.startsWith('image/')) uploadImage(file, box, blockIndex, side);
+            }
+          });
+          return;
+        }
+        var input = box.querySelector('input[type="file"]');
+        if (!input) return;
+        var side = box.getAttribute('data-role') === 'task-img' ? 'task' : 'result';
+        if (!box.getAttribute('data-image-key')) box.setAttribute('data-image-key', side + '_' + blockIndex);
+        box.addEventListener('click', function (e) {
+          if (e.target === input) return;
+          if (e.target.closest('.img-actions')) return;
+          if (e.target.tagName === 'IMG') { openLightbox(e.target.src, e.target.closest('.img-box')); return; }
+          input.click();
+        });
+        input.addEventListener('change', function () {
+          var file = input.files && input.files[0];
+          if (!file || !file.type.startsWith('image/')) return;
+          uploadImage(file, box, blockIndex, side);
+        });
+        box.addEventListener('dragover', function (e) { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer.types.indexOf('Files') >= 0) box.classList.add('drag-over'); });
+        box.addEventListener('dragleave', function (e) { e.preventDefault(); e.stopPropagation(); if (!box.contains(e.relatedTarget)) box.classList.remove('drag-over'); });
+        box.addEventListener('drop', function (e) {
+          e.preventDefault(); e.stopPropagation(); box.classList.remove('drag-over');
+          var file = e.dataTransfer.files && e.dataTransfer.files[0];
+          if (!file || !file.type.startsWith('image/')) return;
+          uploadImage(file, box, blockIndex, side);
+        });
+      });
+      block.querySelectorAll('.img-bar').forEach(function (bar) {
+        var box = getBoxForBar(bar);
+        var side = bar.getAttribute('data-side') || (bar.getAttribute('data-role') === 'task-img-bar' ? 'task' : 'result');
+        var input = bar.querySelector('input[type="file"]');
+        var wrap = bar.closest('.img-bar-wrap');
+        var btn = (wrap ? wrap.querySelector('.btn-bar-upload') : null) || bar.querySelector('.btn-bar-upload');
+        if (btn && input) btn.addEventListener('click', function () { input.click(); });
+        if (input) input.addEventListener('change', function () {
+          var files = input.files;
+          if (!files || !files.length) return;
+          var imageFiles = [];
+          for (var i = 0; i < files.length; i++) {
+            if (files[i].type.startsWith('image/')) imageFiles.push(files[i]);
+          }
+          if (!imageFiles.length) return;
+          var startIdx = parseInt(bar.getAttribute('data-next-index') || '0', 10);
+          bar.setAttribute('data-next-index', String(startIdx + imageFiles.length));
+          var p = Promise.resolve();
+          for (var j = 0; j < imageFiles.length; j++) {
+            p = p.then(function (f, idx) { return uploadImageToBar(f, bar, blockIndex, side, idx); }.bind(null, imageFiles[j], startIdx + j));
+          }
+          p.then(function () { input.value = ''; });
+        });
+        bar.addEventListener('dragover', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          if (e.dataTransfer.types.indexOf('Files') >= 0) bar.classList.add('drag-over');
+        });
+        bar.addEventListener('dragleave', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          if (!bar.contains(e.relatedTarget)) bar.classList.remove('drag-over');
+        });
+        bar.addEventListener('drop', function (e) {
+          e.preventDefault(); e.stopPropagation(); bar.classList.remove('drag-over');
+          var files = e.dataTransfer.files;
+          if (!files || !files.length) return;
+          var imageFiles = [];
+          for (var i = 0; i < files.length; i++) {
+            if (files[i].type.startsWith('image/')) imageFiles.push(files[i]);
+          }
+          if (!imageFiles.length) return;
+          var startIdx = parseInt(bar.getAttribute('data-next-index') || '0', 10);
+          bar.setAttribute('data-next-index', String(startIdx + imageFiles.length));
+          var p = Promise.resolve();
+          for (var j = 0; j < imageFiles.length; j++) {
+            p = p.then(function (f, idx) { return uploadImageToBar(f, bar, blockIndex, side, idx); }.bind(null, imageFiles[j], startIdx + j));
+          }
+        });
+        var thumbsEl = bar.querySelector('.img-bar-thumbs');
+        if (thumbsEl) {
+          thumbsEl.addEventListener('mousedown', function (e) {
+            if (e.button !== 0) return;
+            if (e.target.closest('button')) return;
+            e.preventDefault();
+            _imgBarScrollBar = bar;
+            _imgBarScrollDownX = e.clientX;
+            _imgBarScrollDownY = e.clientY;
+            _imgBarScrollDragStarted = false;
+            document.addEventListener('mousemove', _imgBarScrollMove);
+            document.addEventListener('mouseup', _imgBarScrollEnd);
+          });
+        }
+        bar.addEventListener('click', function (e) {
+          if (bar._scrollDragJustEnded) { bar._scrollDragJustEnded = false; return; }
+          if (e.target.closest('.btn-bar-thumb-delete')) {
+            e.preventDefault();
+            e.stopPropagation();
+            var thumb = e.target.closest('.img-bar-thumb');
+            if (thumb) {
+              var thumbs = bar.querySelectorAll('.img-bar-thumb');
+              var idx = Array.from(thumbs).indexOf(thumb);
+              if (idx >= 0) {
+                showConfirmDeleteDialog('Delete this image from the bar?', function () { removeImageFromBar(bar, idx); });
+              }
+            }
+            return;
+          }
+          var thumb = e.target.closest('.img-bar-thumb');
+          if (!thumb || !box) return;
+          var thumbs = bar.querySelectorAll('.img-bar-thumb');
+          var idx = Array.from(thumbs).indexOf(thumb);
+          if (idx >= 0) { setBarSelectedIndex(bar, idx); syncBoxFromBar(box, bar); }
+        });
+        var barWheelLast = 0;
+        bar.addEventListener('wheel', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var now = Date.now();
+          if (now - barWheelLast < 120) return;
+          barWheelLast = now;
+          var thumbs = bar.querySelectorAll('.img-bar-thumb');
+          if (!thumbs.length || !box) return;
+          var idx = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+          idx = e.deltaY > 0 ? Math.min(thumbs.length - 1, idx + 1) : Math.max(0, idx - 1);
+          setBarSelectedIndex(bar, idx);
+          syncBoxFromBar(box, bar);
+        }, { passive: false });
+      });
+    }
+
+    function collectData() {
+      var blocks = document.querySelectorAll('#blocks .block');
+      var imageIndex = {};
+      var tasks = [];
+      blocks.forEach(function (block, i) {
+        var taskImgBox = block.querySelector('[data-role="task-img"]');
+        var resultImgBox = block.querySelector('[data-role="result-img"]');
+        var taskBar = getBarForBox(taskImgBox);
+        var resultBar = getBarForBox(resultImgBox);
+        var taskComments = block.querySelector('[data-role="task-comments"]');
+        var resultComments = block.querySelector('[data-role="result-comments"]');
+        var taskBaseKey = 'task_' + i;
+        var resultBaseKey = 'result_' + i;
+        var taskKeys = [];
+        var taskUsed = {};
+        if (taskBar) {
+          taskBar.querySelectorAll('.img-bar-thumb').forEach(function (t) {
+            var k = t.getAttribute('data-key');
+            var f = t.getAttribute('data-filename');
+            if (!k || !f) return;
+            if (taskUsed[k]) {
+              k = nextBarKey(taskBaseKey, taskUsed);
+              t.setAttribute('data-key', k);
+            }
+            taskUsed[k] = true;
+            imageIndex[k] = f;
+            taskKeys.push(k);
+          });
+          taskBar.setAttribute('data-next-index', String(taskKeys.length));
+        }
+        var taskKey = taskKeys[0] || taskBaseKey;
+        if (!taskBar && taskImgBox && getImgBoxFilename(taskImgBox)) {
+          imageIndex[taskKey] = getImgBoxFilename(taskImgBox);
+        }
+        var resultKeys = [];
+        var resultUsed = {};
+        if (resultBar) {
+          resultBar.querySelectorAll('.img-bar-thumb').forEach(function (t) {
+            var k = t.getAttribute('data-key');
+            var f = t.getAttribute('data-filename');
+            if (!k || !f) return;
+            if (resultUsed[k]) {
+              k = nextBarKey(resultBaseKey, resultUsed);
+              t.setAttribute('data-key', k);
+            }
+            resultUsed[k] = true;
+            imageIndex[k] = f;
+            resultKeys.push(k);
+          });
+          resultBar.setAttribute('data-next-index', String(resultKeys.length));
+        }
+        var resultKey = resultKeys[0] || resultBaseKey;
+        if (!resultBar && resultImgBox && getImgBoxFilename(resultImgBox)) {
+          imageIndex[resultKey] = getImgBoxFilename(resultImgBox);
+        }
+        tasks.push({
+          taskImage: taskKey,
+          resultImage: resultKey,
+          taskImageKeys: taskKeys.length ? taskKeys : undefined,
+          resultImageKeys: resultKeys.length ? resultKeys : undefined,
+          taskDescription: getImgBoxDescription(taskImgBox, i, 'task'),
+          resultDescription: getImgBoxDescription(resultImgBox, i, 'result'),
+          taskComments: taskComments ? getCommentsData(taskComments) : [],
+          resultComments: resultComments ? getCommentsData(resultComments) : []
+        });
+      });
+      var out = {
+        savedAt: nowStr(),
+        imageIndex: imageIndex,
+        tasks: tasks
+      };
+      if (currentProjectId !== null) {
+        out.projectId = currentProjectId;
+        out.passkey = currentPasskey;
+      }
+      var switchPublicEl = document.getElementById('switch-public');
+      out.publicGlobal = !!(switchPublicEl && switchPublicEl.checked);
+      return out;
+    }
+
+    function deleteTaskBlock(block) {
+      if (!block || !block.parentNode) return;
+      var prev = block.previousElementSibling;
+      var next = block.nextElementSibling;
+      if (prev && prev.classList.contains('block-sep')) prev.remove();
+      else if (next && next.classList.contains('block-sep')) next.remove();
+      block.remove();
+      updateDataJsonOnServer();
+    }
+
+    var pendingDeleteCallback = null;
+
+    function showConfirmDeleteDialog(message, onConfirm) {
+      var msgEl = document.getElementById('confirm-delete-message');
+      if (msgEl) msgEl.textContent = message || 'Delete?';
+      pendingDeleteCallback = onConfirm;
+      var dialog = document.getElementById('confirm-delete-dialog');
+      if (dialog) {
+        dialog.classList.add('active');
+        dialog.setAttribute('aria-hidden', 'false');
+      }
+    }
+
+    function closeConfirmDeleteDialog() {
+      pendingDeleteCallback = null;
+      var dialog = document.getElementById('confirm-delete-dialog');
+      if (dialog) {
+        dialog.classList.remove('active');
+        dialog.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    function initConfirmDeleteDialog() {
+      var dialog = document.getElementById('confirm-delete-dialog');
+      if (!dialog) return;
+      dialog.querySelector('.btn-cancel').addEventListener('click', function () {
+        closeConfirmDeleteDialog();
+      });
+      dialog.querySelector('.btn-confirm-delete').addEventListener('click', function () {
+        if (typeof pendingDeleteCallback === 'function') {
+          pendingDeleteCallback();
+          closeConfirmDeleteDialog();
+        }
+      });
+      dialog.addEventListener('click', function (e) {
+        if (e.target === dialog) closeConfirmDeleteDialog();
+      });
+      document.addEventListener('keydown', function onConfirmKey(e) {
+        if (e.key === 'Escape' && dialog.classList.contains('active')) {
+          closeConfirmDeleteDialog();
+        }
+      });
+    }
+
+    function initEditImageDialog() {
+      var editDialog = document.getElementById('edit-image-dialog');
+      if (!editDialog) return;
+      var btnClose = editDialog.querySelector('.btn-close-edit');
+      var iframe = document.getElementById('edit-image-iframe');
+      function closeEditDialog() {
+        editDialog.classList.remove('active');
+        if (iframe) iframe.src = 'about:blank';
+      }
+      if (btnClose) btnClose.addEventListener('click', closeEditDialog);
+      editDialog.addEventListener('click', function (e) {
+        if (e.target === editDialog) closeEditDialog();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && editDialog.classList.contains('active')) closeEditDialog();
+      });
+      window.addEventListener('message', function (e) {
+        if (e.data && e.data.type === 'editimage-saved' && window._editImageBox) {
+          var box = window._editImageBox;
+          var img = box && box.querySelector('img');
+          var ver = String(Date.now());
+          if (img) {
+            box.setAttribute('data-versionimage', ver);
+            var filename = getImgBoxFilename(box);
+            if (filename) {
+              var bases = getDataAndImageBase();
+              var imageBase = bases.imageBase;
+              if (imageBase.length && imageBase.charAt(imageBase.length - 1) !== '/') imageBase += '/';
+              var newSrc = imageBase + filename + '?v=' + ver;
+              img.src = newSrc;
+              var bar = getBarForBox(box);
+              if (bar) {
+                bar.querySelectorAll('.img-bar-thumb').forEach(function (thumb) {
+                  if (thumb.getAttribute('data-filename') === filename) {
+                    var timg = thumb.querySelector('img');
+                    if (timg) timg.src = newSrc;
+                  }
+                });
+              }
+            } else if (img.src && img.src.indexOf('blob:') !== 0) {
+              var base = img.src.split('?')[0];
+              img.src = base + '?v=' + ver;
+            }
+          }
+          closeEditDialog();
+        }
+      });
+    }
+
+    document.getElementById('blocks').addEventListener('click', function (e) {
+      var btn = e.target.closest('button');
+      var box = e.target.closest('.img-box');
+      if (box && e.target.closest('.btn-delete-img')) {
+        e.preventDefault();
+        showConfirmDeleteDialog('Delete this image?', function () { removeImage(box); });
+        return;
+      }
+      if (box && e.target.closest('.btn-edit-img')) {
+        e.preventDefault();
+        var imgEl = box.querySelector('img');
+        var src = imgEl && imgEl.src;
+        var filename = getImgBoxFilename(box);
+        var editDialog = document.getElementById('edit-image-dialog');
+        var editIframe = document.getElementById('edit-image-iframe');
+        if (editDialog && editIframe) {
+          window._editImageBox = box;
+          var url = 'editimage.html';
+          if (src) {
+            var absUrl = src;
+            if (src.indexOf('/') === 0) absUrl = window.location.origin + src;
+            url += '?image=' + encodeURIComponent(absUrl);
+          }
+          if (filename) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'filename=' + encodeURIComponent(filename);
+          editIframe.src = url;
+          editDialog.classList.add('active');
+        }
+        return;
+      }
+      if (box && e.target.closest('.btn-replace-img')) {
+        e.preventDefault();
+        var bar = getBarForBox(box);
+        var input;
+        if (bar) {
+          var idx = parseInt(bar.getAttribute('data-selected-index') || '0', 10);
+          removeImageFromBar(bar, idx);
+          input = bar.querySelector('input[type="file"]');
+        } else {
+          input = box.querySelector('input[type="file"]');
+        }
+        if (input) input.click();
+        return;
+      }
+      if (btn && btn.classList.contains('btn-delete-task')) {
+        e.preventDefault();
+        var block = btn.closest('.block');
+        if (block) showConfirmDeleteDialog('Delete this task? This cannot be undone.', function () { deleteTaskBlock(block); });
+        return;
+      }
+      if (e.target.classList && e.target.classList.contains('comment-inline-img')) {
+        e.preventDefault();
+        openLightbox(e.target.src, null);
+        return;
+      }
+      if (!btn) return;
+      if (btn.id === 'btn-new-task') {
+        var blocks = document.getElementById('blocks');
+        var index = blocks.querySelectorAll('.block').length;
+        var out = createBlock(index);
+        var newTaskRow = blocks.querySelector('.new-task-row');
+        blocks.insertBefore(out.sep, newTaskRow);
+        blocks.insertBefore(out.block, newTaskRow);
+        updateDataJsonOnServer();
+        buildTaskDescriptionNav();
+        return;
+      }
+      var item = e.target.closest('.comment-item');
+      if (item && btn.classList.contains('btn-edit')) {
+        e.preventDefault();
+        editComment(item);
+      }
+      if (item && btn.classList.contains('btn-delete')) {
+        e.preventDefault();
+        showConfirmDeleteDialog('Delete this comment?', function () { deleteComment(item); });
+      }
+    });
+
+    var imgZoomOverlay = document.getElementById('img-zoom-overlay');
+    if (imgZoomOverlay) {
+      imgZoomOverlay.querySelector('.img-zoom-close').addEventListener('click', closeLightbox);
+      imgZoomOverlay.addEventListener('click', function (e) {
+        if (e.target === imgZoomOverlay) closeLightbox();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && imgZoomOverlay.classList.contains('active')) closeLightbox();
+      });
+    }
+    var imgZoomOverlayBar = document.getElementById('img-zoom-overlay-bar');
+    if (imgZoomOverlayBar) {
+      var zoomBarWheelLast = 0;
+      imgZoomOverlayBar.addEventListener('wheel', function (e) {
+        if (!imgZoomOverlay || !imgZoomOverlay.classList.contains('active')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var now = Date.now();
+        if (now - zoomBarWheelLast < 120) return;
+        zoomBarWheelLast = now;
+        var thumbs = imgZoomOverlayBar.querySelectorAll('.img-zoom-overlay-bar-thumb');
+        if (!thumbs.length) return;
+        var imgEl = document.getElementById('img-zoom-image');
+        if (!imgEl) return;
+        var selIdx = -1;
+        thumbs.forEach(function (t, i) { if (t.classList.contains('selected')) selIdx = i; });
+        if (selIdx < 0) selIdx = 0;
+        selIdx = e.deltaY > 0 ? Math.min(thumbs.length - 1, selIdx + 1) : Math.max(0, selIdx - 1);
+        var nextImg = thumbs[selIdx].querySelector('img');
+        if (nextImg && nextImg.src) imgEl.src = nextImg.src;
+        thumbs.forEach(function (t, i) { t.classList.toggle('selected', i === selIdx); });
+      }, { passive: false });
+    }
+
+    initConfirmDeleteDialog();
+    initEditImageDialog();
+
+    function showGateError(msg) {
+      var el = document.getElementById('gate-error');
+      if (el) { el.textContent = msg || ''; el.style.display = msg ? 'block' : 'none'; }
+    }
+
+    function initProjectGate() {
+      var gate = document.getElementById('project-gate');
+      var cardsContainer = document.getElementById('gate-project-cards');
+      var newNameInput = document.getElementById('gate-new-name');
+      var newPasskeyInput = document.getElementById('gate-new-passkey');
+      var createBtn = document.getElementById('gate-btn-create');
+      var passkeyOverlay = document.getElementById('passkey-dialog-overlay');
+      var passkeyInput = document.getElementById('passkey-dialog-input');
+      var passkeyTitle = document.getElementById('passkey-dialog-title');
+      var passkeyError = document.getElementById('passkey-dialog-error');
+      var passkeyLoadBtn = passkeyOverlay && passkeyOverlay.querySelector('.passkey-dialog-load');
+      var passkeyCancelBtn = passkeyOverlay && passkeyOverlay.querySelector('.passkey-dialog-cancel');
+      var selectedProjectId = null;
+      var selectedProjectName = '';
+      if (!gate || !cardsContainer) return;
+
+      var params = new URLSearchParams(window.location.search);
+      var hasN = params.get('n');
+      if (params.get('public') === '1' && hasN) {
+        var prefix = getApiPrefix();
+        var dataUrl = prefix + '/api/data';
+        fetch(dataUrl + (dataUrl.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now())
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(r.statusText)); })
+          .then(function (data) {
+            if (data && data.tasks && data.tasks.length) {
+              applyProjectData(data);
+              gate.classList.add('hidden');
+              var wrap = document.getElementById('switch-public-wrap');
+              if (wrap) wrap.style.display = 'none';
+              var logoutBtn = document.getElementById('btn-logout');
+              if (logoutBtn) logoutBtn.style.display = 'none';
+            }
+          })
+          .catch(function () {});
+        return;
+      }
+
+      function hideGate() {
+        gate.classList.add('hidden');
+        var wrap = document.getElementById('switch-public-wrap');
+        if (wrap) wrap.style.display = 'inline-flex';
+      }
+
+      function hideGatePublicView() {
+        gate.classList.add('hidden');
+        var wrap = document.getElementById('switch-public-wrap');
+        if (wrap) wrap.style.display = 'none';
+        var logoutBtn = document.getElementById('btn-logout');
+        if (logoutBtn) logoutBtn.style.display = 'none';
+      }
+
+      function updateUrlForProject(projectName) {
+        if (!projectName) return;
+        try {
+          var params = new URLSearchParams(window.location.search);
+          params.set('n', projectName);
+          var url = window.location.pathname + '?' + params.toString();
+          if (window.location.hash) url += window.location.hash;
+          history.replaceState(null, '', url);
+        } catch (e) {}
+      }
+
+      function fetchProjects() {
+        var prefix = getApiPrefix();
+        return fetch(prefix + '/api/projects').then(function (r) { return r.json(); });
+      }
+
+      var deleteProjectOverlay = document.getElementById('delete-project-dialog-overlay');
+      var deleteProjectMsgEl = document.getElementById('delete-project-dialog-msg');
+      var deleteProjectCodeEl = document.getElementById('delete-project-random-code');
+      var deleteProjectInput = document.getElementById('delete-project-confirm-input');
+      var deleteProjectError = document.getElementById('delete-project-dialog-error');
+      var deleteProjectCancelBtn = deleteProjectOverlay && deleteProjectOverlay.querySelector('.delete-project-dialog-cancel');
+      var deleteProjectConfirmBtn = deleteProjectOverlay && deleteProjectOverlay.querySelector('.delete-project-dialog-confirm');
+      var pendingDeleteProjectId = null;
+      var pendingDeleteProjectName = '';
+      var pendingDeleteRandomCode = '';
+
+      function openDeleteProjectDialog(projectId, projectName) {
+        pendingDeleteProjectId = projectId;
+        pendingDeleteProjectName = projectName || projectId;
+        pendingDeleteRandomCode = String(1000 + Math.floor(Math.random() * 9000));
+        if (deleteProjectMsgEl) deleteProjectMsgEl.textContent = 'ลบ Project "' + (projectName || projectId) + '"? พิมพ์ตัวเลขด้านล่างเพื่อยืนยัน';
+        if (deleteProjectCodeEl) deleteProjectCodeEl.textContent = pendingDeleteRandomCode;
+        if (deleteProjectInput) { deleteProjectInput.value = ''; deleteProjectInput.focus(); }
+        if (deleteProjectError) { deleteProjectError.style.display = 'none'; deleteProjectError.textContent = ''; }
+        if (deleteProjectOverlay) deleteProjectOverlay.classList.add('active');
+      }
+
+      function closeDeleteProjectDialog() {
+        pendingDeleteProjectId = null;
+        pendingDeleteProjectName = '';
+        pendingDeleteRandomCode = '';
+        if (deleteProjectOverlay) deleteProjectOverlay.classList.remove('active');
+        if (deleteProjectInput) deleteProjectInput.value = '';
+        if (deleteProjectError) { deleteProjectError.style.display = 'none'; deleteProjectError.textContent = ''; }
+      }
+
+      function showDeleteProjectError(msg) {
+        if (!deleteProjectError) return;
+        deleteProjectError.textContent = msg || '';
+        deleteProjectError.style.display = msg ? 'block' : 'none';
+      }
+
+      if (deleteProjectCancelBtn) deleteProjectCancelBtn.addEventListener('click', closeDeleteProjectDialog);
+      if (deleteProjectOverlay) {
+        deleteProjectOverlay.addEventListener('click', function (e) {
+          if (e.target === deleteProjectOverlay) closeDeleteProjectDialog();
+        });
+      }
+      if (deleteProjectInput) {
+        deleteProjectInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' && deleteProjectConfirmBtn) deleteProjectConfirmBtn.click();
+          if (e.key === 'Escape') closeDeleteProjectDialog();
+        });
+        deleteProjectInput.addEventListener('input', function () {
+          this.value = this.value.replace(/\D/g, '').slice(0, 4);
+        });
+      }
+      if (deleteProjectConfirmBtn) {
+        deleteProjectConfirmBtn.addEventListener('click', function () {
+          var inputVal = (deleteProjectInput && deleteProjectInput.value) || '';
+          showDeleteProjectError('');
+          if (inputVal !== pendingDeleteRandomCode) {
+            showDeleteProjectError('ตัวเลขไม่ตรงกับที่แสดง กรุณาพิมพ์ให้ถูกต้อง');
+            return;
+          }
+          if (!pendingDeleteProjectId) { closeDeleteProjectDialog(); return; }
+          var prefix = getApiPrefix();
+          fetch(prefix + '/api/delete-project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectId: pendingDeleteProjectId })
+          })
+            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (data) { return { status: r.status, data: data }; }); })
+            .then(function (res) {
+              if (res.status === 404 || (res.data && res.data.error)) {
+                showDeleteProjectError(res.data && res.data.error ? res.data.error : 'ไม่พบ Project');
+                return;
+              }
+              closeDeleteProjectDialog();
+              return fetchProjects();
+            })
+            .then(function (res) {
+              if (res && res.projects !== undefined) fillProjectCards(res.projects || []);
+            })
+            .catch(function () {
+              showDeleteProjectError('ลบไม่สำเร็จ');
+            });
+        });
+      }
+
+      function fillProjectCards(projects) {
+        cardsContainer.innerHTML = '';
+        (projects || []).forEach(function (p) {
+          var card = document.createElement('div');
+          card.className = 'project-card';
+          card.setAttribute('data-project-id', p.id);
+          var nameEl = document.createElement('span');
+          nameEl.className = 'project-card-name';
+          nameEl.textContent = p.name || p.id;
+          card.appendChild(nameEl);
+          var btnDel = document.createElement('button');
+          btnDel.type = 'button';
+          btnDel.className = 'btn-delete-project';
+          btnDel.title = 'ลบ Project';
+          btnDel.setAttribute('aria-label', 'ลบ Project');
+          btnDel.textContent = '\u2715';
+          btnDel.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openDeleteProjectDialog(p.id, p.name || p.id);
+          });
+          card.appendChild(btnDel);
+          card.addEventListener('click', function (e) {
+            if (e.target === btnDel || e.target.closest('.btn-delete-project')) return;
+            selectedProjectId = p.id;
+            selectedProjectName = p.name || p.id;
+            passkeyTitle.textContent = 'Enter Passkey — ' + selectedProjectName;
+            if (passkeyInput) { passkeyInput.value = ''; passkeyInput.focus(); }
+            if (passkeyError) { passkeyError.textContent = ''; passkeyError.style.display = 'none'; }
+            if (passkeyOverlay) passkeyOverlay.classList.add('active');
+          });
+          cardsContainer.appendChild(card);
+        });
+      }
+
+      function closePasskeyDialog() {
+        if (passkeyOverlay) passkeyOverlay.classList.remove('active');
+        if (passkeyInput) passkeyInput.value = '';
+        if (passkeyError) { passkeyError.textContent = ''; passkeyError.style.display = 'none'; }
+        selectedProjectId = null;
+      }
+
+      function showPasskeyError(msg) {
+        if (!passkeyError) return;
+        passkeyError.textContent = msg || '';
+        passkeyError.style.display = msg ? 'block' : 'none';
+      }
+
+      if (passkeyCancelBtn) {
+        passkeyCancelBtn.addEventListener('click', closePasskeyDialog);
+      }
+      if (passkeyOverlay) {
+        passkeyOverlay.addEventListener('click', function (e) {
+          if (e.target === passkeyOverlay) closePasskeyDialog();
+        });
+      }
+      if (passkeyInput) {
+        passkeyInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' && passkeyLoadBtn) passkeyLoadBtn.click();
+          if (e.key === 'Escape') closePasskeyDialog();
+        });
+      }
+
+      if (passkeyLoadBtn) {
+        passkeyLoadBtn.addEventListener('click', function () {
+          var projectId = selectedProjectId;
+          var passkey = (passkeyInput && passkeyInput.value) || '';
+          showPasskeyError('');
+          if (!projectId) { showPasskeyError('Select a project'); return; }
+          var prefix = getApiPrefix();
+          fetch(prefix + '/api/load-project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectId: projectId, passkey: passkey })
+          })
+            .then(function (r) {
+              if (r.status === 403) throw new Error('Invalid passkey');
+              if (!r.ok) throw new Error(r.statusText);
+              return r.json();
+            })
+            .then(function (res) {
+              if (!res.ok || !res.data) throw new Error('No data');
+              currentProjectId = projectId;
+              currentPasskey = passkey;
+              try {
+                setCookie('lastProjectId', projectId, 30);
+                setCookie('passkey_' + projectId, passkey, 30);
+              } catch (e) {}
+              applyProjectData(res.data);
+              updateUrlForProject(selectedProjectName);
+              closePasskeyDialog();
+              hideGate();
+            })
+            .catch(function (err) {
+              showPasskeyError(err.message || 'Load failed');
+            });
+        });
+      }
+
+      createBtn.addEventListener('click', function () {
+        var name = (newNameInput && newNameInput.value.trim()) || 'New Project';
+        var passkey = (newPasskeyInput && newPasskeyInput.value) || '';
+        showGateError('');
+        var prefix = getApiPrefix();
+        fetch(prefix + '/api/create-project', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, passkey: passkey })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (res) {
+            if (res.error) throw new Error(res.error);
+            var projectId = res.projectId;
+            currentProjectId = projectId;
+            currentPasskey = passkey;
+            return fetch(prefix + '/api/load-project', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ projectId: projectId, passkey: passkey })
+            });
+          })
+          .then(function (r) { return r.json(); })
+          .then(function (res) {
+            if (!res.ok || !res.data) return;
+            applyProjectData(res.data);
+            try {
+              setCookie('lastProjectId', currentProjectId, 30);
+              setCookie('passkey_' + currentProjectId, currentPasskey, 30);
+            } catch (e) {}
+            return fetchProjects();
+          })
+          .then(function (res) {
+            if (res && res.projects) fillProjectCards(res.projects);
+            updateUrlForProject(name);
+            hideGate();
+          })
+          .catch(function (err) {
+            showGateError(err.message || 'Create failed');
+          });
+      });
+
+      function tryLoadFromSession() {
+        var lastId = null;
+        var savedPasskey = null;
+        try {
+          lastId = getCookie('lastProjectId');
+          if (lastId) savedPasskey = getCookie('passkey_' + lastId);
+        } catch (e) { return; }
+        if (!lastId || savedPasskey === null) return;
+        var prefix = getApiPrefix();
+        fetch(prefix + '/api/load-project', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: lastId, passkey: savedPasskey })
+        })
+          .then(function (r) {
+            if (r.status === 403) throw new Error('Invalid passkey');
+            if (!r.ok) throw new Error(r.statusText);
+            return r.json();
+          })
+          .then(function (res) {
+            if (!res.ok || !res.data) return;
+            currentProjectId = lastId;
+            currentPasskey = savedPasskey;
+            applyProjectData(res.data);
+            hideGate();
+            fetchProjects().then(function (list) {
+              var proj = (list.projects || []).find(function (p) { return p.id === lastId; });
+              if (proj && (proj.name || proj.id)) updateUrlForProject(proj.name || proj.id);
+            }).catch(function () {});
+          })
+          .catch(function () {
+            /* show gate with project cards; user can pick project and enter passkey in dialog */
+          });
+      }
+
+      function openPasskeyDialogForProject(projectId, projectName) {
+        selectedProjectId = projectId;
+        selectedProjectName = projectName || projectId;
+        if (passkeyTitle) passkeyTitle.textContent = 'Enter Passkey — ' + selectedProjectName;
+        if (passkeyInput) { passkeyInput.value = ''; passkeyInput.focus(); }
+        if (passkeyError) { passkeyError.textContent = ''; passkeyError.style.display = 'none'; }
+        if (passkeyOverlay) passkeyOverlay.classList.add('active');
+      }
+
+      function tryLoadWithPasskey(projectId, passkey) {
+        var prefix = getApiPrefix();
+        return fetch(prefix + '/api/load-project', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: projectId, passkey: passkey })
+        })
+          .then(function (r) {
+            if (r.status === 403) throw new Error('Invalid passkey');
+            if (!r.ok) throw new Error(r.statusText);
+            return r.json();
+          })
+          .then(function (res) {
+            if (!res.ok || !res.data) throw new Error('No data');
+            return res.data;
+          });
+      }
+
+      function tryLoadPublicData() {
+        var prefix = getApiPrefix();
+        return fetch(prefix + '/api/data?t=' + Date.now())
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(r.statusText)); });
+      }
+
+      fetchProjects().then(function (res) {
+        var projects = res.projects || [];
+        fillProjectCards(projects);
+        var params = new URLSearchParams(window.location.search);
+        var nameParam = params.get('n');
+        if (nameParam) {
+          var name = decodeURIComponent(nameParam).trim();
+          var project = projects.find(function (p) { return (p.name || '').trim() === name; });
+          if (project) {
+            var savedPasskey = null;
+            try {
+              savedPasskey = getCookie('passkey_' + project.id);
+            } catch (e) {}
+            var isPublic = (project.public || '0') === '1';
+            if (savedPasskey !== null && savedPasskey !== undefined) {
+              tryLoadWithPasskey(project.id, savedPasskey)
+                .then(function (data) {
+                  currentProjectId = project.id;
+                  currentPasskey = savedPasskey;
+                  applyProjectData(data);
+                  updateUrlForProject(project.name || project.id);
+                  hideGate();
+                })
+                .catch(function () {
+                  if (isPublic) {
+                    tryLoadPublicData()
+                      .then(function (data) {
+                        if (data && data.tasks && data.tasks.length) {
+                          applyProjectData(data);
+                          hideGatePublicView();
+                        } else {
+                          openPasskeyDialogForProject(project.id, project.name || project.id);
+                        }
+                      })
+                      .catch(function () {
+                        openPasskeyDialogForProject(project.id, project.name || project.id);
+                      });
+                  } else {
+                    openPasskeyDialogForProject(project.id, project.name || project.id);
+                  }
+                });
+            } else {
+              if (isPublic) {
+                tryLoadPublicData()
+                  .then(function (data) {
+                    if (data && data.tasks && data.tasks.length) {
+                      applyProjectData(data);
+                      hideGatePublicView();
+                    } else {
+                      openPasskeyDialogForProject(project.id, project.name || project.id);
+                    }
+                  })
+                  .catch(function () {
+                    openPasskeyDialogForProject(project.id, project.name || project.id);
+                  });
+              } else {
+                openPasskeyDialogForProject(project.id, project.name || project.id);
+              }
+            }
+          } else {
+            tryLoadFromSession();
+          }
+        } else {
+          tryLoadFromSession();
+        }
+      }).catch(function () {
+        fillProjectCards([]);
+      });
+
+      var btnLogout = document.getElementById('btn-logout');
+      if (btnLogout) {
+        btnLogout.addEventListener('click', function () {
+          try {
+            var lastId = getCookie('lastProjectId');
+            deleteCookie('lastProjectId');
+            if (lastId) deleteCookie('passkey_' + lastId);
+          } catch (e) {}
+          gate.classList.remove('hidden');
+          var wrap = document.getElementById('switch-public-wrap');
+          if (wrap) wrap.style.display = 'none';
+        });
+      }
+
+      var switchPublic = document.getElementById('switch-public');
+      if (switchPublic) {
+        switchPublic.addEventListener('change', function () {
+          var projectId = currentProjectId;
+          var passkey = currentPasskey;
+          if (!projectId || passkey === undefined) return;
+          var isChecked = this.checked;
+          var prevChecked = !isChecked;
+          var prefix = getApiPrefix();
+          fetch(prefix + '/api/publish-global', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectId: projectId, passkey: passkey, public: isChecked })
+          })
+            .then(function (r) {
+              if (!r.ok) throw new Error(r.statusText);
+              return r.json();
+            })
+            .then(function () {})
+            .catch(function () {
+              switchPublic.checked = prevChecked;
+            });
+        });
+      }
+    }
+
+    function initPasskeyToggles() {
+      document.querySelectorAll('.btn-toggle-passkey').forEach(function (btn) {
+        var wrap = btn.closest('.passkey-input-wrap');
+        var input = wrap && wrap.querySelector('input');
+        if (!input) return;
+        btn.addEventListener('click', function () {
+          var isHidden = input.type === 'password';
+          input.type = isHidden ? 'text' : 'password';
+          btn.textContent = isHidden ? '🙈' : '👁';
+          btn.setAttribute('title', isHidden ? 'Hide passkey' : 'Show passkey');
+          btn.setAttribute('aria-label', isHidden ? 'Hide passkey' : 'Show passkey');
+        });
+      });
+    }
+
+    buildTaskDescriptionNav();
+    (function initTaskDescriptionNavBehavior() {
+      var navEl = document.getElementById('task-description-nav');
+      var scrollTicking = false;
+      function onScroll() {
+        if (scrollTicking) return;
+        scrollTicking = true;
+        requestAnimationFrame(function () {
+          updateTaskDescriptionNavHighlight();
+          scrollTicking = false;
+        });
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', updateTaskDescriptionNavViewport);
+      function scrollToHash() {
+        var hash = window.location.hash;
+        if (!hash) return;
+        var id = hash.replace(/^#/, '');
+        if (!id) return;
+        var el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: 'auto', block: 'start' });
+          requestAnimationFrame(function () { updateTaskDescriptionNavHighlight(); });
+        }
+      }
+      if (window.location.hash) {
+        allowUrlHashUpdateFromScroll = false;
+        scrollToHash();
+        setTimeout(function () { allowUrlHashUpdateFromScroll = true; }, 600);
+      }
+      window.addEventListener('hashchange', scrollToHash);
+      if (navEl) {
+        var wheelLast = 0;
+        var wheelThrottleMs = 140;
+        navEl.addEventListener('wheel', function (e) {
+          e.preventDefault();
+          var now = Date.now();
+          if (now - wheelLast < wheelThrottleMs) return;
+          wheelLast = now;
+          var list = document.getElementById('task-description-nav-list');
+          if (!list) return;
+          var items = list.querySelectorAll('.task-description-nav-item');
+          if (!items.length) return;
+          var idx = getCurrentTaskDescriptionNavIndex();
+          idx = e.deltaY > 0 ? Math.min(items.length - 1, idx + 1) : Math.max(0, idx - 1);
+          setTaskDescriptionNavActiveByIndex(idx, false);
+          if (items[idx]) items[idx].focus();
+        }, { passive: false });
+        navEl.addEventListener('keydown', function (e) {
+          if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+          e.preventDefault();
+          var list = document.getElementById('task-description-nav-list');
+          if (!list) return;
+          var items = list.querySelectorAll('.task-description-nav-item');
+          if (!items.length) return;
+          var idx = getCurrentTaskDescriptionNavIndex();
+          idx = e.key === 'ArrowDown' ? Math.min(items.length - 1, idx + 1) : Math.max(0, idx - 1);
+          setTaskDescriptionNavActiveByIndex(idx);
+          if (items[idx]) items[idx].focus();
+        });
+      }
+    })();
+    initPasskeyToggles();
+    initProjectGate();
+  </script>
+</body>
+</html>

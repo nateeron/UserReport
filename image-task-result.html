@@ -60,6 +60,20 @@
       background: #3f3f46;
       border-color: #52525b;
     }
+    .btn-home {
+      padding: 8px 16px;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      background: #252529;
+      color: #e4e4e7;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .btn-home:hover {
+      background: #3f3f46;
+      border-color: #52525b;
+    }
     .block {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1224,7 +1238,8 @@
       <span class="switch-public-label">เปิดสาธารณะ</span>
       <input type="checkbox" id="switch-public" class="switch-public" title="Update global JSON และเปิดหน้าเช็ค">
     </label>
-    <button type="button" class="btn-logout" id="btn-logout">Logout</button>
+    <button type="button" class="btn-logout" id="btn-logout" style="display:none">Logout</button>
+    <button type="button" class="btn-home" id="btn-home" style="display:none">Home</button>
   </div>
 
   <div id="confirm-delete-dialog" class="confirm-dialog-overlay" aria-hidden="true">
@@ -3163,6 +3178,10 @@
         gate.classList.add('hidden');
         var wrap = document.getElementById('switch-public-wrap');
         if (wrap) wrap.style.display = 'inline-flex';
+        var logoutBtn = document.getElementById('btn-logout');
+        if (logoutBtn) logoutBtn.style.display = '';
+        var homeBtn = document.getElementById('btn-home');
+        if (homeBtn) homeBtn.style.display = 'none';
       }
 
       function hideGatePublicView() {
@@ -3171,6 +3190,8 @@
         if (wrap) wrap.style.display = 'none';
         var logoutBtn = document.getElementById('btn-logout');
         if (logoutBtn) logoutBtn.style.display = 'none';
+        var homeBtn = document.getElementById('btn-home');
+        if (homeBtn) homeBtn.style.display = '';
       }
 
       function updateUrlForProject(projectName) {
@@ -3511,7 +3532,10 @@
                     tryLoadPublicData()
                       .then(function (data) {
                         if (data && data.tasks && data.tasks.length) {
+                          currentProjectId = project.id;
+                          currentPasskey = '';
                           applyProjectData(data);
+                          updateUrlForProject(project.name || project.id);
                           hideGatePublicView();
                         } else {
                           openPasskeyDialogForProject(project.id, project.name || project.id);
@@ -3529,7 +3553,10 @@
                 tryLoadPublicData()
                   .then(function (data) {
                     if (data && data.tasks && data.tasks.length) {
+                      currentProjectId = project.id;
+                      currentPasskey = '';
                       applyProjectData(data);
+                      updateUrlForProject(project.name || project.id);
                       hideGatePublicView();
                     } else {
                       openPasskeyDialogForProject(project.id, project.name || project.id);
@@ -3563,6 +3590,24 @@
           gate.classList.remove('hidden');
           var wrap = document.getElementById('switch-public-wrap');
           if (wrap) wrap.style.display = 'none';
+          btnLogout.style.display = 'none';
+          var homeBtn = document.getElementById('btn-home');
+          if (homeBtn) homeBtn.style.display = 'none';
+          try {
+            window.history.replaceState(null, '', '/');
+          } catch (e) {}
+        });
+      }
+      var btnHome = document.getElementById('btn-home');
+      if (btnHome) {
+        btnHome.addEventListener('click', function () {
+          gate.classList.remove('hidden');
+          btnHome.style.display = 'none';
+          var logoutBtn = document.getElementById('btn-logout');
+          if (logoutBtn) logoutBtn.style.display = 'none';
+          try {
+            window.history.replaceState(null, '', '/');
+          } catch (e) {}
         });
       }
 

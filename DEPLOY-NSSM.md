@@ -1,5 +1,5 @@
 # Deploy as Windows Service with NSSM
-
+pyinstaller --onefile --name UserReport --clean --hidden-import=werkzeug.security app.py
 Use NSSM (Non-Sucking Service Manager) to run the app as a Windows service so it starts on boot and restarts on failure.
 
 ## 1. Prerequisites
