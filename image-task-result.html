@@ -632,6 +632,22 @@
       color: #e4e4e7;
       border-color: #52525b;
     }
+    .comment-form .btn-comment-upload {
+      height: 24px;
+      min-width: 44px;
+      padding: 0 8px;
+      font-size: 0.7rem;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      border-radius: 6px;
+      color: #a1a1aa;
+      cursor: pointer;
+    }
+    .comment-form .btn-comment-upload:hover {
+      background: #3f3f46;
+      color: #e4e4e7;
+      border-color: #52525b;
+    }
     .comment-form .comment-form-code-dropdown {
       display: none;
       position: absolute;
@@ -667,6 +683,72 @@
       flex-direction: column;
       flex: 1;
       min-width: 0;
+      border-radius: 12px;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+    .comment-form .comment-form-input-wrap.drag-over {
+      background: rgba(167, 139, 250, 0.08);
+      box-shadow: 0 0 0 2px #a78bfa;
+    }
+    .comment-form .comment-form-preview {
+      max-height: 300px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 8px 0;
+      margin-bottom: 4px;
+    }
+    .comment-form .comment-form-preview:empty { display: none; }
+    .comment-form .comment-form-preview-item {
+      position: relative;
+      flex-shrink: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #3f3f46;
+      background: #18181b;
+    }
+    .comment-form .comment-form-preview-item img {
+      max-height: 300px;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      display: block;
+      cursor: zoom-in;
+      vertical-align: top;
+    }
+    .comment-form .comment-form-preview-item .comment-form-preview-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.75);
+      color: #f4f4f5;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .comment-form .comment-form-preview-item:hover .comment-form-preview-remove { opacity: 1; }
+    .comment-form .comment-form-preview-item .comment-form-preview-remove:hover { background: #dc2626; color: #fff; }
+    .comment-item .comment-text .comment-inline-img {
+      max-height: 300px;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      display: block;
+      cursor: zoom-in;
+      border-radius: 8px;
+      margin: 8px 0;
+      border: 1px solid #3f3f46;
     }
     .new-task-row {
       margin-top: 24px;
@@ -1190,6 +1272,7 @@
             <div class="comment-form-input-wrap">
               <div class="comment-form-code-row">
                 <button type="button" class="btn-code-mini" title="Insert code block">[code]</button>
+                <button type="button" class="btn-comment-upload" title="Upload image">[upload]</button>
                 <div class="comment-form-code-dropdown">
                   <button type="button" class="comment-form-code-option" data-lang="bash">bash</button>
                   <button type="button" class="comment-form-code-option" data-lang="json">json</button>
@@ -1200,6 +1283,8 @@
                   <button type="button" class="comment-form-code-option" data-lang="python">python</button>
                 </div>
               </div>
+              <div class="comment-form-preview"></div>
+              <input type="file" accept="image/*" multiple class="comment-form-file-input" style="display:none">
               <textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea>
             </div>
             <button type="button" class="btn-post">Post</button>
@@ -1227,6 +1312,7 @@
             <div class="comment-form-input-wrap">
               <div class="comment-form-code-row">
                 <button type="button" class="btn-code-mini" title="Insert code block">[code]</button>
+                <button type="button" class="btn-comment-upload" title="Upload image">[upload]</button>
                 <div class="comment-form-code-dropdown">
                   <button type="button" class="comment-form-code-option" data-lang="bash">bash</button>
                   <button type="button" class="comment-form-code-option" data-lang="json">json</button>
@@ -1237,6 +1323,8 @@
                   <button type="button" class="comment-form-code-option" data-lang="python">python</button>
                 </div>
               </div>
+              <div class="comment-form-preview"></div>
+              <input type="file" accept="image/*" multiple class="comment-form-file-input" style="display:none">
               <textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea>
             </div>
             <button type="button" class="btn-post">Post</button>
@@ -1271,6 +1359,7 @@
             <div class="comment-form-input-wrap">
               <div class="comment-form-code-row">
                 <button type="button" class="btn-code-mini" title="Insert code block">[code]</button>
+                <button type="button" class="btn-comment-upload" title="Upload image">[upload]</button>
                 <div class="comment-form-code-dropdown">
                   <button type="button" class="comment-form-code-option" data-lang="bash">bash</button>
                   <button type="button" class="comment-form-code-option" data-lang="json">json</button>
@@ -1281,6 +1370,8 @@
                   <button type="button" class="comment-form-code-option" data-lang="python">python</button>
                 </div>
               </div>
+              <div class="comment-form-preview"></div>
+              <input type="file" accept="image/*" multiple class="comment-form-file-input" style="display:none">
               <textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea>
             </div>
             <button type="button" class="btn-post">Post</button>
@@ -1308,6 +1399,7 @@
             <div class="comment-form-input-wrap">
               <div class="comment-form-code-row">
                 <button type="button" class="btn-code-mini" title="Insert code block">[code]</button>
+                <button type="button" class="btn-comment-upload" title="Upload image">[upload]</button>
                 <div class="comment-form-code-dropdown">
                   <button type="button" class="comment-form-code-option" data-lang="bash">bash</button>
                   <button type="button" class="comment-form-code-option" data-lang="json">json</button>
@@ -1318,6 +1410,8 @@
                   <button type="button" class="comment-form-code-option" data-lang="python">python</button>
                 </div>
               </div>
+              <div class="comment-form-preview"></div>
+              <input type="file" accept="image/*" multiple class="comment-form-file-input" style="display:none">
               <textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea>
             </div>
             <button type="button" class="btn-post">Post</button>
@@ -1358,15 +1452,15 @@
       return div.innerHTML;
     }
 
-    function renderCommentText(text) {
-      if (!text) return '';
+    function renderTextSegment(seg) {
+      if (!seg) return '';
       var re = /```(\w*)\n?([\s\S]*?)```/g;
       var parts = [];
       var lastIdx = 0;
       var m;
       var langMap = { js: 'javascript', html: 'markup', pine: 'javascript' };
-      while ((m = re.exec(text)) !== null) {
-        if (m.index > lastIdx) parts.push(escapeHtml(text.slice(lastIdx, m.index)));
+      while ((m = re.exec(seg)) !== null) {
+        if (m.index > lastIdx) parts.push(escapeHtml(seg.slice(lastIdx, m.index)));
         var lang = (m[1] || '').trim().toLowerCase();
         var code = m[2].replace(/^\n|\n$/g, '');
         lang = langMap[lang] || lang;
@@ -1382,8 +1476,29 @@
         parts.push(langSpan + '<pre class="code-block"><code class="language-' + escapeHtml(lang) + '">' + codeHtml + '</code></pre>');
         lastIdx = re.lastIndex;
       }
-      if (lastIdx < text.length) parts.push(escapeHtml(text.slice(lastIdx)));
+      if (lastIdx < seg.length) parts.push(escapeHtml(seg.slice(lastIdx)));
       return parts.join('').replace(/\n/g, '<br>');
+    }
+    function renderCommentText(text) {
+      if (!text) return '';
+      var imagePrefix = (typeof getApiPrefix === 'function' ? getApiPrefix() : '') + '/image/';
+      var imageRe = /\[IMAGE:([^\]]+)\]/g;
+      var segments = [];
+      var lastIdx = 0;
+      var im;
+      while ((im = imageRe.exec(text)) !== null) {
+        if (im.index > lastIdx) segments.push({ type: 'text', value: text.slice(lastIdx, im.index) });
+        var filename = (im[1] || '').trim().replace(/^\/+/, '');
+        if (filename) segments.push({ type: 'image', value: filename });
+        lastIdx = imageRe.lastIndex;
+      }
+      if (lastIdx < text.length) segments.push({ type: 'text', value: text.slice(lastIdx) });
+      var out = [];
+      for (var i = 0; i < segments.length; i++) {
+        if (segments[i].type === 'text') out.push(renderTextSegment(segments[i].value));
+        else out.push('<img src="' + escapeHtml(imagePrefix + segments[i].value) + '" class="comment-inline-img" alt="">');
+      }
+      return out.join('');
     }
 
     function postComment(commentsEl, text) {
@@ -1932,7 +2047,7 @@
             '</div></div>' +
           '<div class="comments" data-role="task-comments">' +
             '<div class="comment-feed"></div>' +
-            '<div class="comment-form"><div class="comment-form-input-wrap"><div class="comment-form-code-row"><button type="button" class="btn-code-mini" title="Insert code block">[code]</button><div class="comment-form-code-dropdown"><button type="button" class="comment-form-code-option" data-lang="bash">bash</button><button type="button" class="comment-form-code-option" data-lang="json">json</button><button type="button" class="comment-form-code-option" data-lang="js">js</button><button type="button" class="comment-form-code-option" data-lang="html">html</button><button type="button" class="comment-form-code-option" data-lang="pine">pine</button><button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button><button type="button" class="comment-form-code-option" data-lang="python">python</button></div></div><textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea></div><button type="button" class="btn-post">Post</button></div>' +
+            '<div class="comment-form"><div class="comment-form-input-wrap"><div class="comment-form-code-row"><button type="button" class="btn-code-mini" title="Insert code block">[code]</button><button type="button" class="btn-comment-upload" title="Upload image">[upload]</button><div class="comment-form-code-dropdown"><button type="button" class="comment-form-code-option" data-lang="bash">bash</button><button type="button" class="comment-form-code-option" data-lang="json">json</button><button type="button" class="comment-form-code-option" data-lang="js">js</button><button type="button" class="comment-form-code-option" data-lang="html">html</button><button type="button" class="comment-form-code-option" data-lang="pine">pine</button><button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button><button type="button" class="comment-form-code-option" data-lang="python">python</button></div></div><div class="comment-form-preview"></div><input type="file" accept="image/*" multiple class="comment-form-file-input" style="display:none"><textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea></div><button type="button" class="btn-post">Post</button></div>' +
           '</div>' +
         '</div>' +
         '<div class="col">' +
@@ -1949,7 +2064,7 @@
             '</div></div>' +
           '<div class="comments" data-role="result-comments">' +
             '<div class="comment-feed"></div>' +
-            '<div class="comment-form"><div class="comment-form-input-wrap"><div class="comment-form-code-row"><button type="button" class="btn-code-mini" title="Insert code block">[code]</button><div class="comment-form-code-dropdown"><button type="button" class="comment-form-code-option" data-lang="bash">bash</button><button type="button" class="comment-form-code-option" data-lang="json">json</button><button type="button" class="comment-form-code-option" data-lang="js">js</button><button type="button" class="comment-form-code-option" data-lang="html">html</button><button type="button" class="comment-form-code-option" data-lang="pine">pine</button><button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button><button type="button" class="comment-form-code-option" data-lang="python">python</button></div></div><textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea></div><button type="button" class="btn-post">Post</button></div>' +
+            '<div class="comment-form"><div class="comment-form-input-wrap"><div class="comment-form-code-row"><button type="button" class="btn-code-mini" title="Insert code block">[code]</button><button type="button" class="btn-comment-upload" title="Upload image">[upload]</button><div class="comment-form-code-dropdown"><button type="button" class="comment-form-code-option" data-lang="bash">bash</button><button type="button" class="comment-form-code-option" data-lang="json">json</button><button type="button" class="comment-form-code-option" data-lang="js">js</button><button type="button" class="comment-form-code-option" data-lang="html">html</button><button type="button" class="comment-form-code-option" data-lang="pine">pine</button><button type="button" class="comment-form-code-option" data-lang="csharp">csharp</button><button type="button" class="comment-form-code-option" data-lang="python">python</button></div></div><div class="comment-form-preview"></div><input type="file" accept="image/*" multiple class="comment-form-file-input" style="display:none"><textarea placeholder="Write a comment... (Ctrl+Enter to post)" maxlength="2000" autocomplete="off" rows="2"></textarea></div><button type="button" class="btn-post">Post</button></div>' +
           '</div>' +
         '</div>';
       if (!skipBind) bindBlockEvents(block);
@@ -2375,18 +2490,126 @@
     function bindCommentForm(form) {
       var commentsEl = form.closest('.comments');
       var input = form.querySelector('textarea') || form.querySelector('input');
+      var previewEl = form.querySelector('.comment-form-preview');
+      var fileInput = form.querySelector('.comment-form-file-input');
       if (!commentsEl || !input) return;
+      form._commentImageFiles = form._commentImageFiles || [];
+      function addCommentImage(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        form._commentImageFiles.push(file);
+        var url = URL.createObjectURL(file);
+        var wrap = document.createElement('div');
+        wrap.className = 'comment-form-preview-item';
+        var img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        img.addEventListener('click', function (e) { e.stopPropagation(); openLightbox(img.src, null); });
+        var rm = document.createElement('button');
+        rm.type = 'button';
+        rm.className = 'comment-form-preview-remove';
+        rm.innerHTML = '&#215;';
+        rm.setAttribute('aria-label', 'Remove');
+        rm.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var idx = Array.from(previewEl.children).indexOf(wrap);
+          if (idx >= 0) form._commentImageFiles.splice(idx, 1);
+          try { URL.revokeObjectURL(url); } catch (_) {}
+          wrap.remove();
+        });
+        wrap.appendChild(img);
+        wrap.appendChild(rm);
+        previewEl.appendChild(wrap);
+      }
+      function clearCommentImages() {
+        form._commentImageFiles = [];
+        if (previewEl) {
+          previewEl.querySelectorAll('img').forEach(function (img) {
+            var u = img.src;
+            if (u && u.indexOf('blob:') === 0) try { URL.revokeObjectURL(u); } catch (_) {}
+          });
+          previewEl.innerHTML = '';
+        }
+        if (fileInput) fileInput.value = '';
+      }
       function submit() {
         var val = input.value.trim();
-        if (!val) return;
-        postComment(commentsEl, val);
-        input.value = '';
-        updateDataJsonOnServer();
+        var files = form._commentImageFiles || [];
+        if (!val && !files.length) return;
+        function doPost(finalText) {
+          postCommentWithTime(commentsEl, finalText, nowStr());
+          input.value = '';
+          clearCommentImages();
+          updateDataJsonOnServer();
+        }
+        if (!files.length) {
+          doPost(val);
+          return;
+        }
+        var p = Promise.resolve();
+        var filenames = [];
+        files.forEach(function (file) {
+          p = p.then(function () {
+            var fd = new FormData();
+            fd.append('image', file);
+            return fetch(UPLOAD_URL, { method: 'POST', body: fd })
+              .then(function (r) {
+                if (!r.ok) throw new Error('Upload failed');
+                return r.json();
+              })
+              .then(function (data) {
+                filenames.push(data.filename);
+              });
+          });
+        });
+        p.then(function () {
+          var imagePart = filenames.map(function (f) { return '[IMAGE:' + f + ']'; }).join('\n');
+          var finalText = val ? val + '\n' + imagePart : imagePart;
+          doPost(finalText);
+        }).catch(function (err) {
+          alert('Upload failed: ' + (err.message || err));
+        });
       }
       form.querySelector('.btn-post').addEventListener('click', submit);
       input.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); submit(); }
       });
+      if (fileInput) {
+        var btnUpload = form.querySelector('.btn-comment-upload');
+        if (btnUpload) btnUpload.addEventListener('click', function () { fileInput.click(); });
+        fileInput.addEventListener('change', function () {
+          var files = fileInput.files;
+          if (files) for (var i = 0; i < files.length; i++) addCommentImage(files[i]);
+          fileInput.value = '';
+        });
+      }
+      input.addEventListener('paste', function (e) {
+        var items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf('image/') === 0) {
+            e.preventDefault();
+            var file = items[i].getAsFile();
+            if (file) addCommentImage(file);
+            break;
+          }
+        }
+      });
+      var wrap = form.querySelector('.comment-form-input-wrap');
+      if (wrap) {
+        wrap.addEventListener('dragover', function (e) {
+          if (e.dataTransfer.types.indexOf('Files') >= 0) { e.preventDefault(); e.stopPropagation(); wrap.classList.add('drag-over'); }
+        });
+        wrap.addEventListener('dragleave', function (e) {
+          if (!wrap.contains(e.relatedTarget)) wrap.classList.remove('drag-over');
+        });
+        wrap.addEventListener('drop', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          wrap.classList.remove('drag-over');
+          var files = e.dataTransfer.files;
+          if (files) for (var i = 0; i < files.length; i++) addCommentImage(files[i]);
+        });
+      }
       var codeRow = form.querySelector('.comment-form-code-row');
       var codeDropdown = form.querySelector('.comment-form-code-dropdown');
       var btnCode = form.querySelector('.btn-code-mini');
@@ -2827,6 +3050,11 @@
         e.preventDefault();
         var block = btn.closest('.block');
         if (block) showConfirmDeleteDialog('Delete this task? This cannot be undone.', function () { deleteTaskBlock(block); });
+        return;
+      }
+      if (e.target.classList && e.target.classList.contains('comment-inline-img')) {
+        e.preventDefault();
+        openLightbox(e.target.src, null);
         return;
       }
       if (!btn) return;
